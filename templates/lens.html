@@ -118,7 +118,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
     <div class="s-title">对焦距离 Focus</div>
     <div class="ctrl">
       <div class="ctrl-lab"><span>焦点</span><b id="foVal">主体</b></div>
-      <input type="range" id="foSlider" min="0" max="100" step="1" value="6">
+      <input type="range" id="foSlider" min="0" max="100" step="1" value="10">
     </div>
 
     <div class="s-title">光线方案 Lighting</div>
@@ -238,11 +238,15 @@ function snip(){
 /* ── 交互 ── */
 document.getElementById('flSlider').oninput=e=>{fl=+e.target.value;update()};
 document.getElementById('apSlider').oninput=e=>{apIdx=+e.target.value;update()};
-document.getElementById('foSlider').oninput=e=>{focusZ=3-(+e.target.value/100)*30;update()};
+document.getElementById('foSlider').oninput=e=>{
+  const v=+e.target.value;
+  focusZ = 2.5 - (v/100)*22;   /* v=10 → 主体, v=0 → 前景, v=100 → 远景 */
+  update();
+};
 document.getElementById('resetBtn').onclick=()=>{
   fl=50;apIdx=4;lightIdx=0;focusZ=-2.0;
   document.getElementById('flSlider').value=50;document.getElementById('apSlider').value=4;
-  document.getElementById('foSlider').value=6;update();toast('已重置');
+  document.getElementById('foSlider').value=10;focusZ=-0.2;update();toast('已重置');
 };
 document.getElementById('copyBtn').onclick=async()=>{
   try{await navigator.clipboard.writeText(snip());toast('✅ 参数已复制')}catch(e){toast('复制失败')}
@@ -274,7 +278,7 @@ addEventListener('wheel',e=>{
   document.getElementById('flSlider').value=fl;update();
 },{passive:false});
 
-focusZ=3-(6/100)*30;
+focusZ=-0.2;
 init();
 </script>
 </body>

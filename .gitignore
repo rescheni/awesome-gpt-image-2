@@ -26,3 +26,11 @@ Thumbs.db
 # 临时
 /tmp/
 *.tmp
+
+# 大文件(通过 scripts/fetch-assets.sh 下载)
+static/depth-model.onnx
+static/ort/*.wasm
+static/ort/*.jsep.wasm
+static/three.js
+static/three.min.js
+static/three.module.js

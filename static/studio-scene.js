@@ -18,6 +18,61 @@ function createStudio(container, opts = {}) {
   renderer.toneMappingExposure = 1.5;
   container.appendChild(renderer.domElement);
 
+  /* ═══ 景深后处理管线(真实模糊) ═══ */
+  const rtColor = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+  const rtDepth = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+  rtDepth.depthTexture = new THREE.DepthTexture(1, 1);
+  const dofScene = new THREE.Scene();
+  const dofCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const dofMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tDiffuse: { value: rtColor.texture },
+      tDepth: { value: rtDepth.depthTexture },
+      uFocus: { value: 5.0 },
+      uAperture: { value: 2.8 },
+      uNear: { value: 0.1 },
+      uFar: { value: 200.0 },
+      uTexel: { value: new THREE.Vector2(1 / 800, 1 / 600) },
+      uMaxBlur: { value: 3.0 },
+      uEnabled: { value: 1.0 }
+    },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: `
+      uniform sampler2D tDiffuse; uniform sampler2D tDepth;
+      uniform float uFocus, uAperture, uNear, uFar, uMaxBlur, uEnabled;
+      uniform vec2 uTexel;
+      varying vec2 vUv;
+      float linearize(float d){
+        float z = d * 2.0 - 1.0;
+        return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+      }
+      void main(){
+        if(uEnabled < 0.5){ gl_FragColor = texture2D(tDiffuse, vUv); return; }
+        float depth = texture2D(tDepth, vUv).x;
+        float lin = linearize(depth);
+        /* 弥散圆: 与焦平面距离越大越模糊; 光圈越大(f值越小)越明显 */
+        float far = lin > uFocus ? 1.35 : 1.0;          /* 背景虚化更明显 */
+        float coc = clamp((abs(lin - uFocus) / max(uFocus * 1.1, 0.15) - 0.12) * (2.4 / uAperture) * far, 0.0, 1.0);
+        float r = coc * uMaxBlur;
+        if(r < 1.0){ gl_FragColor = texture2D(tDiffuse, vUv); return; }
+        /* 黄金角散景圆盘采样(16 tap) */
+        vec4 sum = texture2D(tDiffuse, vUv);
+        float wsum = 1.0;
+        for(int i = 1; i <= 16; i++){
+          float fi = float(i);
+          float a = fi * 2.39996;
+          float rr = sqrt(fi / 17.0);
+          vec2 off = vec2(cos(a), sin(a)) * rr * r * uTexel * 3.5;
+          float w = 1.0 - rr * 0.55;
+          sum += texture2D(tDiffuse, vUv + off) * w;
+          wsum += w;
+        }
+        gl_FragColor = sum / wsum;
+      }`
+  });
+  const dofQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), dofMat);
+  dofScene.add(dofQuad);
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a12);
   scene.fog = new THREE.FogExp2(0x0a0a12, 0.022);
@@ -156,6 +211,13 @@ function createStudio(container, opts = {}) {
   person.scale.setScalar(1.22);
   scene.add(person);
 
+  /* ── 高斯泼溅容器 ── */
+  const splatRoot = new THREE.Group();
+  scene.add(splatRoot);
+  let splatMode = false;
+  const indoorRoot = new THREE.Group();   /* 室内元素统一挂载, 便于整体显隐 */
+  scene.add(indoorRoot);
+
   /* ── 氛围粒子 ── */
   const pCount = 110;
   const pGeo = new THREE.BufferGeometry();
@@ -181,7 +243,7 @@ function createStudio(container, opts = {}) {
   beam.position.set(-2.6, .03, -2.5); scene.add(beam);
 
   /* ── 状态 ── */
-  const st = { focal: 50, aperture: 2.8, focusZ: -2.0, orbit: 0, autoRotate: true, orbitX: 0 };
+  const st = { focal: 50, aperture: 2.8, focusZ: -0.2, orbit: 0, autoRotate: true, orbitX: 0 };
   let ready = true, raf = null;
 
   /* ═══ API ═══ */
@@ -280,10 +342,21 @@ function createStudio(container, opts = {}) {
     camera.fov = 2 * Math.atan(36 / (2 * st.focal)) * 180 / Math.PI;
     camera.updateProjectionMatrix();
     applyDepth();
+    /* 更新景深后处理 */
+    dofMat.uniforms.uAperture.value = st.aperture;
+    dofMat.uniforms.uNear.value = camera.near;
+    dofMat.uniforms.uFar.value = camera.far;
+    /* 光圈越小越清晰 */
+    dofMat.uniforms.uMaxBlur.value = st.aperture <= 1.4 ? 1.6 : st.aperture <= 2.8 ? 1.1 : st.aperture <= 5.6 ? 0.6 : 0.2;
   }
 
   /** 对焦位置(-8 近 ~ -6 远) */
-  function setFocus(z) { st.focusZ = z; applyDepth(); }
+  function setFocus(z) {
+    st.focusZ = z; applyDepth();
+    /* 焦平面距离: 相机在 z=dist, 物体在 z=focusZ → 距离 */
+    const dist = 3.9 * Math.max(0.35, Math.min(4.0, st.focal / 50));
+    dofMat.uniforms.uFocus.value = Math.max(0.3, dist - z);
+  }
 
   function applyDepth() {
     const ap = st.aperture;
@@ -302,10 +375,62 @@ function createStudio(container, opts = {}) {
   function setTone2() { }
 
   function resize() {
-    renderer.setSize(W(), H());
-    camera.aspect = W() / H();
+    const w = W(), h = H();
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    rtColor.setSize(w, h);
+    rtDepth.setSize(w, h);
+    dofMat.uniforms.uTexel.value.set(1 / w, 1 / h);
   }
+
+  /** 载入高斯泼溅点云(单图3D) */
+  function setSplat(points) {
+    clearSplat();
+    splatRoot.add(points);
+    splatMode = true;
+    /* 隐藏室内元素 */
+    person.visible = false;
+    furnishings.forEach(f => f.visible = false);
+    strips.forEach(x => x.visible = false);
+    pool.visible = false;
+    particles.visible = false;
+    beam.visible = false;
+    floor.visible = false;
+    backWall.visible = false;
+    wl.visible = false; wr.visible = false;
+    winLight.visible = false;
+    winFrame.visible = false;
+    rug.visible = false;
+    scene.background.setHex(0x05050a);
+    scene.fog.density = 0.012;
+    /* 关闭景深(点云自带层次) */
+    dofMat.uniforms.uEnabled.value = 0;
+  }
+  function clearSplat() {
+    while (splatRoot.children.length) {
+      const o = splatRoot.children.pop();
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    }
+    if (!splatMode) return;
+    splatMode = false;
+    /* 恢复室内场景 */
+    person.visible = true;
+    furnishings.forEach(f => f.visible = true);
+    strips.forEach(x => x.visible = true);
+    pool.visible = true;
+    particles.visible = true;
+    beam.visible = true;
+    floor.visible = true;
+    backWall.visible = true;
+    wl.visible = true; wr.visible = true;
+    winLight.visible = true;
+    winFrame.visible = true;
+    rug.visible = true;
+    dofMat.uniforms.uEnabled.value = 1;
+  }
+  function isSplat() { return splatMode; }
 
   function setOrbit(y, x) { if (y != null) st.orbit = y; if (x != null) st.orbitX = x; }
   function setAutoRotate(v) { st.autoRotate = !!v; }
@@ -315,12 +440,21 @@ function createStudio(container, opts = {}) {
   function animate() {
     raf = requestAnimationFrame(animate);
     if (st.autoRotate) st.orbit += 0.0014;
-    const dist = 3.9 * Math.max(0.35, Math.min(4.0, st.focal / 50));
-    const swing = Math.sin(st.orbit) * 0.55;
-    camera.position.set(Math.sin(swing) * dist * 0.5 + 0.55,
-                        1.55 + (st.orbitX || 0) * dist * 0.4,
-                        Math.cos(swing) * dist * 0.92);
-    camera.lookAt(0, 1.2, -0.3);
+    if (splatMode) {
+      /* 泼溅模式: 绕点云居中环视 */
+      const R = 2.6;
+      const swing2 = Math.sin(st.orbit) * 0.75;
+      camera.position.set(Math.sin(swing2) * R, 0.15 + (st.orbitX || 0) * 1.6, Math.cos(swing2) * R);
+      camera.lookAt(0, 0, 0);
+      camera.fov = 42; camera.updateProjectionMatrix();
+    } else {
+      const dist = 3.9 * Math.max(0.35, Math.min(4.0, st.focal / 50));
+      const swing = Math.sin(st.orbit) * 0.55;
+      camera.position.set(Math.sin(swing) * dist * 0.5 + 0.55,
+                          1.55 + (st.orbitX || 0) * dist * 0.4,
+                          Math.cos(swing) * dist * 0.92);
+      camera.lookAt(0, 1.2, -0.3);
+    }
     /* 粒子飘落 */
     const arr = pGeo.attributes.position.array;
     for (let i = 0; i < arr.length; i += 3) {
@@ -329,7 +463,13 @@ function createStudio(container, opts = {}) {
       if (arr[i + 1] < 0) { arr[i + 1] = 4.6; arr[i] = (Math.random() - .5) * 9; arr[i + 2] = (Math.random() - .5) * 11 - 1; }
     }
     pGeo.attributes.position.needsUpdate = true;
+    /* 1) 场景 → RT(含深度)  2) 后处理 → 屏幕 */
+    renderer.setRenderTarget(rtColor);
     renderer.render(scene, camera);
+    renderer.setRenderTarget(rtDepth);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(dofScene, dofCam);
   }
 
   function dispose() {
@@ -338,10 +478,14 @@ function createStudio(container, opts = {}) {
     container.innerHTML = '';
   }
 
+  resize();
   animate();
   applyDepth();
+  /* 初始化景深为对准主体 */
+  dofMat.uniforms.uFocus.value = 3.9 - (-0.2);
 
-  return { setPerson, setLighting, setTone, setAtmosphere, setLens, setFocus, setOrbit,
+  function setDOF(on){ dofMat.uniforms.uEnabled.value = on ? 1 : 0; }
+  return { setSplat, clearSplat, isSplat, setDOF, setPerson, setLighting, setTone, setAtmosphere, setLens, setFocus, setOrbit,
            setAutoRotate, resize, getState, dispose,
            get focal() { return st.focal; }, get aperture() { return st.aperture; } };
 }

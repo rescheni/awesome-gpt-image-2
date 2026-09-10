@@ -126,7 +126,14 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text
 .out::-webkit-scrollbar{width:3px}.out::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .out .ph{color:var(--text3);text-align:center;padding:16px 0;font-size:12px}
 .facts{display:flex;gap:8px;margin-top:9px}
-.facts .btn{flex:1;text-align:center;padding:9px}
+.facts{flex-wrap:wrap}
+.facts .btn{flex:1;text-align:center;padding:9px;min-width:78px}
+.btn-gen{flex:2;min-width:150px;padding:11px;border:none;border-radius:11px;cursor:pointer;font-family:inherit;
+  font-size:13.5px;font-weight:700;letter-spacing:1.2px;transition:.22s;
+  background:linear-gradient(135deg,#e8d5a8,#c9a96a 45%,#8b7cf6 130%);color:#1a1509;
+  box-shadow:0 4px 18px rgba(201,169,106,.28)}
+.btn-gen:hover{transform:translateY(-1px);box-shadow:0 7px 26px rgba(201,169,106,.4)}
+.btn-gen:active{transform:translateY(0) scale(.99)}
 
 /* 右栏: 选项 / 3D */
 .right{border-left:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
@@ -155,6 +162,14 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text
   border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:7px 11px;font-family:'Space Grotesk';
   font-size:11px;color:#e8d5a8;pointer-events:none}
 .vhud small{display:block;color:rgba(255,255,255,.5);font-size:9.5px;margin-top:2px}
+#splatBar{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:5}
+.sbtn{font-size:11px;padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit;
+  border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.5);color:#e8d5a8;
+  backdrop-filter:blur(8px);transition:.2s;white-space:nowrap}
+.sbtn:hover{background:rgba(201,169,106,.25);border-color:rgba(201,169,106,.5)}
+.sbtn:disabled{opacity:.55;cursor:wait}
+#splatTip{position:absolute;bottom:10px;right:12px;font-size:10px;color:rgba(255,255,255,.45);
+  letter-spacing:1px;font-family:'Noto Sans SC'}
 
 /* 弹窗/提示 */
 .modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
@@ -211,11 +226,13 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text
     <div class="mfoot">
       <div class="fh">
         <span class="ft">完整提示词</span>
+        <span class="ft" id="syncInfo" style="text-transform:none;letter-spacing:0;color:var(--green)"></span>
         <span class="ft" id="srcInfo" style="text-transform:none;letter-spacing:0"></span>
       </div>
       <div class="out" id="out"><div class="ph">点击上方方块，从右侧选择参数 ✦ 提示词将实时生成</div></div>
       <div class="facts">
-        <button class="btn btn-gold" id="btnCopy" onclick="copyOut()">⧉ 复制提示词</button>
+        <button class="btn-gen" id="btnGen" onclick="syncPrompt('手动生成')">✦ 生成提示词</button>
+        <button class="btn btn-gold" id="btnCopy" onclick="copyOut()">⧉ 复制</button>
         <button class="btn" id="btnAI" onclick="aiEnhance()" disabled>✦ AI 增强</button>
         <button class="btn" onclick="resetAll()">↺ 清空</button>
       </div>
@@ -237,6 +254,12 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text
     <div id="pane3d" style="display:none;flex:1;position:relative;min-height:0">
       <div id="viewWrap">
         <div class="vhud" id="vHud">实时预览<small>选择参数后自动更新</small></div>
+        <div id="splatBar">
+          <input type="file" id="splatFile" accept="image/*" style="display:none">
+          <button class="sbtn" id="splatImport" title="导入图片 → 生成 3D 场景">🖼 图片转 3D</button>
+          <button class="sbtn" id="splatReset" style="display:none" title="恢复室内场景">↺ 恢复</button>
+        </div>
+        <div id="splatTip" style="display:none">高斯泼溅 · 拖拽环视 · 滚轮缩放</div>
       </div>
     </div>
     <div class="rscroll" id="paneSet" style="display:none">
@@ -308,6 +331,8 @@ input:checked+.sll:before{transform:translateX(17px)}
 </style>
 
 <script src="/static/three.min.js"></script>
+<script src="/static/ort/ort.min.js"></script>
+<script src="/static/gaussian-splat.js"></script>
 <script src="/static/studio-scene.js"></script>
 <script>
 
@@ -331,7 +356,7 @@ const S = {
   rightView:'opt',
   srcTab:'tpl',
 };
-BLOCKS.forEach(b=>{S.blocks[b.id]={text:'',items:[],groups:{},enabled:b.hasSwitch?false:true}});
+BLOCKS.forEach(b=>{S.blocks[b.id]={text:'',items:[],groups:{},enabled:b.hasSwitch?false:true,userEdited:false}});
 
 let lib={templates:[]}, starters=[], allParams=null, myTpls=[], isLogged=false;
 
@@ -560,11 +585,12 @@ function pickItem(field,gid,idx,ev){
     const gsrc=getOptSource(field).find(x=>x.id===gid);
     wrap.querySelectorAll('.oc').forEach((c,i)=>c.classList.toggle('on',isSel(field,gid,i)));
   }
+  S.blocks[field].userEdited=true;
   renderBlocks();
-  if(window.__update3D)window.__update3D();
+  syncPrompt('选择参数');
 }
 function setText(field,v){
-  S.blocks[field].text=v;
+  S.blocks[field].text=v;S.blocks[field].userEdited=true;
   /* 轻量更新: 不重建DOM, 避免输入时丢焦点 */
   renderOutput();updateProgressLight();updateBlockStates();
   if(window.__update3D)window.__update3D();
@@ -595,9 +621,9 @@ function updateBlockStates(){
 }
 function clearBlock(id){
   const b=S.blocks[id];
-  b.text='';b.items=[];b.groups={};
+  b.text='';b.items=[];b.groups={};b.userEdited=false;
   if(BLOCKS.find(x=>x.id===id).hasSwitch)b.enabled=false;
-  renderBlocks();renderOpts();if(window.__update3D)window.__update3D();
+  renderBlocks();renderOpts();syncPrompt('清空『'+BLOCKS.find(x=>x.id===id).name+'』');
   toast('已清空该块');
 }
 function toggleChar(on){
@@ -695,6 +721,16 @@ function buildPrompt(){
   return p.join('\n');
 }
 
+function syncPrompt(reason){
+  renderOutput();
+  updateProgressLight();
+  updateBlockStates();
+  if(window.__update3D)window.__update3D();
+  if(reason)$('syncInfo').textContent='已同步 · '+reason;
+  const o=$('out');
+  o.style.transition='none';o.style.borderColor='rgba(201,169,106,.55)';
+  setTimeout(()=>{o.style.transition='border-color .8s';o.style.borderColor='var(--border)'},60);
+}
 function renderOutput(){
   const txt=buildPrompt();
   const el=$('out');
@@ -710,37 +746,35 @@ async function copyOut(){
   catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✅ 已复制')}
 }
 function resetAll(){
-  BLOCKS.forEach(b=>{S.blocks[b.id]={text:'',items:[],groups:{},enabled:b.hasSwitch?false:true}});
+  BLOCKS.forEach(b=>{S.blocks[b.id]={text:'',items:[],groups:{},enabled:b.hasSwitch?false:true,userEdited:false}});
   S.tpl=null;renderBlocks();renderOpts();renderStarters();
-  if(window.__update3D)window.__update3D();
-  toast('已清空');
+  syncPrompt('全部清空');
+  toast('已全部清空');
 }
 
 /* ═══════ 模板 / 案例起点 ═══════ */
 function pickTpl(id){
   const t=lib.templates.find(x=>x.id===id);if(!t)return;
-  const before=JSON.stringify(S.blocks);
   S.tpl=t;
-  /* 只填空的块, 保留用户已改内容 */
   const g=Array.isArray(t.guidance)?t.guidance.join('；'):(t.guidance||'');
   const pf=Array.isArray(t.pitfalls)?t.pitfalls.join('；'):(t.pitfalls||'');
-  let filled=0;
-  if(g&&!S.blocks.composition.items.length&&!S.blocks.composition.text){S.blocks.composition.text=g;filled++}
-  if(pf&&!(S.blocks.negative.items||[]).length){ 
-    S.blocks.negative.items=pf.split('；').filter(Boolean).map((z,i)=>({gid:'tpl_neg',idx:i,zh:z,prompt:pf.split('；')[i]}));
-    filled++;
-  }
-  if(t.styles&&t.styles.length&&!(S.blocks.style.items||[]).length){
-    S.blocks.style.items=t.styles.map((z,i)=>({gid:'tpl_style',idx:i,zh:z,prompt:z}));filled++;
-  }
+  let updated=0,kept=0;
+  /* 未被用户手动改过的块 → 跟随模板更新; 改过的 → 保留 */
+  const put=(field,val,asItems)=>{
+    const b=S.blocks[field];
+    if(b.userEdited){kept++;return}
+    if(asItems){
+      b.items=(val||[]).map((z,i)=>({gid:'tpl_'+field,idx:i,zh:z,prompt:z}));
+    }else b.text=val||'';
+    updated++;
+  };
+  put('composition',g);
+  put('negative',pf?pf.split('；').filter(Boolean):[],true);
+  put('style',t.styles||[],true);
   renderStarters();renderBlocks();renderOpts();
   if(window.__update3D)window.__update3D();
-  const kept=JSON.parse(before);
-  const keptCount=BLOCKS.filter(b=>{
-    const k=kept[b.id],n=S.blocks[b.id];
-    return JSON.stringify(k)!==JSON.stringify(n)&&(k.text||(k.items||[]).length||Object.keys(k.groups||{}).length);
-  }).length;
-  toast(filled?`已应用「${t.title}」·填充${filled}项${keptCount?`，保留你修改的${keptCount}项`:''}`:`已切换到「${t.title}」，保留你已有的内容`);
+  syncPrompt('模板「'+t.title+'」');
+  toast(`已应用「${t.title}」· 更新 ${updated} 个块${kept?`，保留你修改的 ${kept} 个块`:''}`);
 }
 function pickCase(cid){
   const st=starters.find(x=>x.id===cid);if(!st)return;
@@ -963,9 +997,47 @@ function update3D(){
   const mA=gearTxt.match(/f\s*\/\s*([\d.]+)/i);
   const ap=mA?parseFloat(mA[1]):2.8;
   studio3d.setLens(fl,ap);
+  studio3d.setFocus(-0.2);   /* 焦点对准主体 */
 
   $('vHud').innerHTML=`${charOn?'👤 人物':'◎ 无人物'} · ${lightName}<small>${fl}mm f/${ap}</small>`;
 }
+
+/* ═══════ 高斯泼溅(图片 → 3D) ═══════ */
+async function handleSplatFile(file){
+  if(!file)return;
+  const vib=$('vHud'), btn=$('splatImport');
+  btn.disabled=true; btn.textContent='处理中…';
+  vib.innerHTML='读取图片…<small>准备中</small>';
+  try{
+    const img=await SplatLab.fileToImage(file);
+    vib.innerHTML='估算深度…<small>首次需加载模型(约26MB)</small>';
+    const pts=await SplatLab.imageToSplat(img,{
+      density:190, depthScale:1.7, spread:1.0,
+      onProgress:m=>{vib.innerHTML=m+'<small>Depth-Anything-V2 · 浏览器内推理</small>'}
+    });
+    vib.innerHTML='构建泼溅…<small>生成 '+pts.geometry.attributes.position.count.toLocaleString()+' 个高斯点</small>';
+    ensureStudio();
+    studio3d.setSplat(pts);
+    $('splatReset').style.display='';
+    $('splatTip').style.display='';
+    vib.innerHTML='🖼 图片 3D 场景<small>'+pts.geometry.attributes.position.count.toLocaleString()+' 高斯点</small>';
+    toast('✅ 已生成 3D 场景');
+  }catch(e){
+    console.error(e);
+    vib.innerHTML='❌ 失败<small>'+e.message.slice(0,40)+'</small>';
+    toast('生成失败: '+e.message.slice(0,40));
+  }finally{
+    btn.disabled=false; btn.textContent='🖼 图片转 3D';
+  }
+}
+function resetSplat(){
+  if(studio3d){studio3d.clearSplat();studio3d.setFocus(-0.2)}
+  $('splatReset').style.display='none';
+  $('splatTip').style.display='none';
+  update3D();
+  toast('已恢复室内场景');
+}
+function ensureStudio(){ if(!studio3d)init3D(); }
 
 window.__init3D=init3D;
 window.__update3D=update3D;
@@ -999,6 +1071,11 @@ Object.assign(window,{
 });
 
 /* ═══════ 启动 ═══════ */
+$('splatImport').onclick=()=>$('splatFile').click();
+$('splatFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)handleSplatFile(f);e.target.value=''};
+$('splatReset').onclick=resetSplat;
+window.handleSplatFile=handleSplatFile;window.resetSplat=resetSplat;
+
 (async function(){await refreshAuth();await loadAll();renderOpts();applyLensFromStorage()})();
 </script>
 </body>
