@@ -2,9 +2,9 @@
  * Prompt Atelier · 共享 3D 场景模块
  * 工作台(index) 与 镜头工作台(lens) 共用同一套室内场景
  */
-import * as THREE from 'three';
+/* 使用全局 THREE (由 three.min.js 提供, 非模块方式, 兼容性更好) */
 
-export function createStudio(container, opts = {}) {
+function createStudio(container, opts = {}) {
   const W = () => Math.max(container.clientWidth, 200);
   const H = () => Math.max(container.clientHeight, 300);
 
@@ -347,7 +347,7 @@ export function createStudio(container, opts = {}) {
 }
 
 /* 工具: 从文本猜服装色/发色 */
-export function guessColors(text = '') {
+function guessColors(text = '') {
   const t = String(text).toLowerCase();
   let cloth = 0xcfc6b6, hair = 0x241e1a;
   if (/纯欲|白|婚纱|清爽|居服|棉麻|white|cream|linen/.test(t)) cloth = 0xf0e9dd;

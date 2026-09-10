@@ -294,7 +294,9 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<div id="jsErr" style="display:none;position:fixed;left:8px;bottom:8px;background:#3a1010;color:#f88;padding:6px 12px;border-radius:8px;font-size:11px;z-index:999;max-width:70vw"></div>
 <div class="toast" id="toast"></div>
+<noscript><div style="position:fixed;inset:0;background:#0a0a0f;color:#e8e6e1;display:flex;align-items:center;justify-content:center;z-index:999;font-family:sans-serif">请启用 JavaScript 后访问</div></noscript>
 
 <style>
 .sw{position:relative;display:inline-block;width:38px;height:21px}
@@ -305,12 +307,9 @@ input:checked+.sll{background:linear-gradient(135deg,#d8b877,#8b7cf6)}
 input:checked+.sll:before{transform:translateX(17px)}
 </style>
 
-<script type="importmap">
-{ "imports": { "three": "/static/three.module.min.js" } }
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { createStudio, guessColors } from '/static/studio-scene.js';
+<script src="/static/three.min.js"></script>
+<script src="/static/studio-scene.js"></script>
+<script>
 
 /* ═══════ 状态 ═══════ */
 const BLOCKS = [
@@ -336,6 +335,10 @@ BLOCKS.forEach(b=>{S.blocks[b.id]={text:'',items:[],groups:{},enabled:b.hasSwitc
 
 let lib={templates:[]}, starters=[], allParams=null, myTpls=[], isLogged=false;
 
+window.addEventListener('error',e=>{
+  const d=document.getElementById('jsErr');
+  if(d){d.style.display='block';d.textContent='JS 错误: '+(e.message||e.type)}
+});
 const $=id=>document.getElementById(id);
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)};
 async function api(u,o={}){try{const r=await fetch(u,{headers:{'Content-Type':'application/json'},credentials:'include',...o});return await r.json()}catch(e){return{ok:false,msg:'网络错误'}}}
