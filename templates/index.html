@@ -422,7 +422,12 @@ function renderBlocks(){
     if(disabled){
       h+=`<div class="bv empty">点击开启人物后可选特征</div>`;
     } else if(filled){
-      if(bd.text)h+=`<div class="bv">${esc(bd.text)}</div>`;
+      if(bd.text){
+        /* 长文本(多为案例原文)折叠显示, 避免中英混杂 */
+        const t=bd.text;
+        if(t.length>44)h+=`<div class="bv" style="color:var(--text3)">📎 案例原文 ${t.length} 字 <span style="opacity:.7">(点击块查看/编辑)</span></div>`;
+        else h+=`<div class="bv">${esc(t)}</div>`;
+      }
       const tags=[...(bd.items||[]).map(i=>i.zh),...Object.values(bd.groups||{}).map(g=>g.zh)];
       if(tags.length)h+=`<div class="chips-inline">${tags.slice(0,5).map(t=>`<span class="cchip">${esc(t)}</span>`).join('')}${tags.length>5?`<span class="cchip">+${tags.length-5}</span>`:''}</div>`;
     } else {
@@ -503,7 +508,20 @@ function getOptSource(field){
   if(field==='negative')return [{id:'neg_preset',name:'常见负面',items:NEG_PRESETS}];
   return [];
 }
-const STYLE_PRESETS=['写实摄影','3D 渲染','水彩插画','极简海报','暗黑高级','赛博朋克','国风水墨','胶片质感','超现实','杂志大片','Y2K','动漫插画'].map(z=>({zh:z,prompt:''}));
+const STYLE_PRESETS=[
+  {zh:'写实摄影',prompt:'photorealistic photography'},
+  {zh:'3D 渲染',prompt:'3D render, octane render, subsurface scattering'},
+  {zh:'水彩插画',prompt:'watercolor illustration, soft washes, paper texture'},
+  {zh:'极简海报',prompt:'minimalist poster design, clean vector shapes'},
+  {zh:'暗黑高级',prompt:'dark moody premium aesthetic, low-key luxury'},
+  {zh:'赛博朋克',prompt:'cyberpunk aesthetic, neon glow, high tech'},
+  {zh:'国风水墨',prompt:'chinese ink wash painting, oriental aesthetic'},
+  {zh:'胶片质感',prompt:'analog film look, grain, halation'},
+  {zh:'超现实',prompt:'surrealism, dreamlike impossible scene'},
+  {zh:'杂志大片',prompt:'editorial magazine fashion photography'},
+  {zh:'Y2K',prompt:'Y2K aesthetic, chrome, retro futuristic'},
+  {zh:'动漫插画',prompt:'anime illustration, cel shading, vibrant'}
+];
 const COLOR_PRESETS=[
   {zh:'暖金色调',prompt:'warm golden palette'},{zh:'冷蓝调',prompt:'cool blue palette'},
   {zh:'莫兰迪灰调',prompt:'Morandi muted palette'},{zh:'高饱和撞色',prompt:'bold saturated contrast palette'},
@@ -588,24 +606,92 @@ function toggleChar(on){
   if(window.__update3D)window.__update3D();
 }
 
+/* ═══════ 案例英文 → 智能匹配中文选项 ═══════ */
+/* 关键词 → 中文选项 提示表(提升案例匹配准确率) */
+const KEY_HINTS={
+  color:{sage:'莫兰迪灰调',olive:'大地色系',beige:'暖金色调',muted:'莫兰迪灰调',pastel:'粉彩柔调',
+    teal:'青橙对撞',orange:'青橙对撞',neon:'霓虹赛博',monochrome:'黑白灰','black and white':'黑白灰',
+    desaturated:'低饱和高级灰',earthy:'大地色系',crimson:'高饱和撞色',vibrant:'高饱和撞色',
+    'warm gold':'暖金色调','cool blue':'冷蓝调',golden:'暖金色调',blue:'冷蓝调',grey:'莫兰迪灰调',gray:'莫兰迪灰调'},
+  lighting:{golden:'Golden Hour 黄金时刻',sunset:'Golden Hour 黄金时刻',sunlight:'Golden Hour 黄金时刻',
+    neon:'Neon 霓虹光',cyberpunk:'Neon 霓虹光',candle:'Candlelight 烛光',window:'Window Light 窗光',
+    rembrandt:'Rembrandt 伦勃朗光','low key':'Low Key 低调光','high key':'High Key 高调光',
+    backlit:'Backlight 逆光',rim:'Rim Light 轮廓光',overcast:'Overcast 阴天光',soft:'Soft Light 柔光',
+    dramatic:'Low Key 低调光',moonlight:'Moonlight 月光',studio:'Studio Softbox 影棚柔光箱',
+    volumetric:'God Rays 神光',haze:'Atmospheric Haze 大气雾霭',overcast:'Overcast 阴天光'},
+  composition:{'wide-angle':'Wide Angle 广角','close-up':'Close-Up 特写',symmetr:'Symmetry 对称',
+    'rule of thirds':'Rule of Thirds 三分法','leading lines':'Leading Lines 引导线',
+    'bird':'High Angle 高机位','low angle':'Low Angle 低机位','over-the-shoulder':'Over-the-Shoulder 过肩',
+    'dutch':'Dutch Angle 荷兰角',center:'Center Composition 中心构图',negative:'Negative Space 负空间',
+    'minimal':'Negative Space 负空间',framing:'Frame in Frame 框中框',vertical:'Center Composition 中心构图','4:5':'Center Composition 中心构图',horizontal:'Rule of Thirds 三分法',dense:'Negative Space 负空间',composition:'Rule of Thirds 三分法'},
+  style:{watercolor:'水彩插画',illustration:'插画艺术风格',photorealistic:'写实摄影',realistic:'写实摄影',
+    cinematic:'电影感',anime:'动漫插画','3d':'3D 渲染',render:'3D 渲染',poster:'海报排版',
+    minimal:'极简海报',vintage:'胶片质感',film:'胶片质感',surreal:'超现实',vector:'极简海报',
+    cyberpunk:'赛博朋克','ink wash':'国风水墨',editorial:'杂志大片',chrome:'Y2K'},
+  gear:{'85mm':'85mm f/1.4 portrait lens',bokeh:'shallow depth of field','depth of field':'shallow depth of field'}
+};
+
+function matchByHint(field,seg){
+  const hints=KEY_HINTS[field];if(!hints)return null;
+  const low=seg.toLowerCase();
+  for(const [kw,zh] of Object.entries(hints)){
+    if(low.includes(kw)){
+      const src=getOptSource(field);
+      for(const g of src){
+        const i=g.items.findIndex(it=>it.zh===zh||it.zh.startsWith(zh.split(' ')[0]));
+        if(i>=0)return {gid:g.id,idx:i,zh:g.items[i].zh,prompt:g.items[i].prompt||''};
+      }
+    }
+  }
+  return null;
+}
+
+function matchCaseSegments(field, segs){
+  const src=getOptSource(field);
+  const matched=[],leftover=[];
+  const stop=new Set(['the','and','with','for','from','that','this','into','over','under','very','soft','light','style']);
+  segs.forEach(seg=>{
+    /* ① 关键词表优先 */
+    const hinted=matchByHint(field,seg);
+    if(hinted){matched.push(hinted);return}
+    /* ② 词交集打分兜底 */
+    const words=new Set((seg.toLowerCase().match(/[a-z]{3,}/g)||[]).filter(w=>!stop.has(w)));
+    if(!words.size){leftover.push(seg);return}
+    let best=null,bestScore=0;
+    src.forEach(g=>g.items.forEach((it,i)=>{
+      const pw=new Set(((it.prompt||'')+' '+(it.zh||'')).toLowerCase().match(/[a-z]{3,}/g)||[]);
+      if(!pw.size)return;
+      let hit=0;pw.forEach(w=>{if(words.has(w))hit++});
+      const score=hit/Math.min(6,Math.max(2,pw.size));
+      if(score>bestScore){bestScore=score;best={gid:g.id,idx:i,zh:it.zh,prompt:it.prompt||'',split:g.items}}
+    }));
+    if(best&&bestScore>=0.34)matched.push(best);
+    else leftover.push(seg);
+  });
+  return {matched,leftover};
+}
+
 /* ═══════ 拼装提示词 ═══════ */
 function buildPrompt(){
   const p=[];
   const B=S.blocks;
   if(S.tpl)p.push('【模板】'+S.tpl.title);
   const add=(label,vals)=>{const v=vals.filter(Boolean);if(v.length)p.push(label+'：'+v.join(', '))};
+  /* 选项统一输出英文(prompt), 自由文本保持原样 → 最终提示词以英文为主 */
+  const en=i=>i.prompt||i.zh;
+  const enG=g=>g.prompt||g.zh;
   add('主体与场景',[B.subject.text]);
-  if(B.character.enabled)add('人物特征',[...(B.character.items||[]).map(i=>i.zh),...Object.values(B.character.groups||{}).map(g=>g.zh)]);
-  add('视觉风格',[...(B.style.items||[]).map(i=>i.zh),B.style.text]);
-  add('光线氛围',[...(B.lighting.items||[]).map(i=>i.zh),B.lighting.text]);
-  add('色彩调性',[...(B.color.items||[]).map(i=>i.zh),B.color.text]);
-  add('调色滤镜',[...(B.grading.items||[]).map(i=>i.prompt||i.zh),B.grading.text]);
-  add('摄影器材',[...(B.gear.items||[]).map(i=>i.prompt||i.zh),B.gear.text]);
-  add('拍摄参数',[...(B.exposure.items||[]).map(i=>i.prompt||i.zh),B.exposure.text]);
-  add('构图技法',[...(B.composition.items||[]).map(i=>i.prompt||i.zh),B.composition.text]);
-  const neg=[...(B.negative.items||[]).map(i=>i.prompt||i.zh)].filter(Boolean);
-  if(!neg.length)neg.push('避免五颜六色、塑料感、AI假人感、多余文字');
-  p.push('负面约束：'+neg.join(', '));
+  if(B.character.enabled)add('人物',[...(B.character.items||[]).map(en),...Object.values(B.character.groups||{}).map(enG)]);
+  add('视觉风格',[...(B.style.items||[]).map(en),B.style.text]);
+  add('光线氛围',[...(B.lighting.items||[]).map(en),B.lighting.text]);
+  add('色彩调性',[...(B.color.items||[]).map(en),B.color.text]);
+  add('调色滤镜',[...(B.grading.items||[]).map(en),B.grading.text]);
+  add('摄影器材',[...(B.gear.items||[]).map(en),B.gear.text]);
+  add('拍摄参数',[...(B.exposure.items||[]).map(en),B.exposure.text]);
+  add('构图技法',[...(B.composition.items||[]).map(en),B.composition.text]);
+  const neg=[...(B.negative.items||[]).map(en)].filter(Boolean);
+  if(!neg.length)neg.push('avoid oversaturated colors, plastic skin, uncanny AI look, unwanted text');
+  p.push('Negative: '+neg.join(', '));
   return p.join('\n');
 }
 
@@ -706,14 +792,22 @@ function pickCase(cid){
   }
 
   if(split){
-    /* 完整原文保留在主体块(不丢信息) + 各类描述追加到对应块(让3D与提示词都生效) */
+    /* 主体保留原文; 其他类别 → 智能匹配中文选项(选中), 匹配不到的走自由文本 */
     S.blocks.subject.text=prompt.slice(0,700);
-    const put=(f,txt)=>{if(txt&&txt.trim())S.blocks[f].text=((S.blocks[f].text?S.blocks[f].text+' | ':'')+txt).slice(0,480)};
-    put('style',split.style); put('lighting',split.lighting);
-    put('color',split.color); put('composition',split.composition); put('gear',split.gear);
-    if(split.subject&&split.subject!==prompt)S.blocks.subject.text=prompt.slice(0,700);
-    const n=['style','lighting','color','composition','gear'].filter(f=>split[f]).length;
-    toast(`已载入「${st.title}」· 全文入主体 + ${n}类已归类`);
+    let totalHit=0,totalRest=0;
+    [['style','style'],['lighting','lighting'],['color','color'],['composition','composition'],['gear','gear']].forEach(([field,key])=>{
+      const txt=split[key];if(!txt)return;
+      const segs=txt.split(/[,;|]\s*/).map(x=>x.trim()).filter(x=>x.length>3);
+      const {matched,leftover}=matchCaseSegments(field,segs);
+      const b=S.blocks[field];
+      matched.forEach(m=>{
+        if(!(b.items||[]).some(x=>x.gid===m.gid&&x.idx===m.idx))
+          b.items.push({gid:m.gid,idx:m.idx,zh:m.zh,prompt:m.prompt});
+      });
+      if(leftover.length)b.text=((b.text?b.text+' | ':'')+leftover.join(', ')).slice(0,300);
+      totalHit+=matched.length;totalRest+=leftover.length;
+    });
+    toast(`已载入「${st.title}」· 自动选中 ${totalHit} 个选项${totalRest?`，${totalRest} 条原文补充`:''}`);
   } else {
     S.blocks.subject.text=prompt.slice(0,700);
     toast('已载入案例：'+st.title);
