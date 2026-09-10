@@ -150,6 +150,15 @@ def all_params():
                 out[key] = json.load(f)
     return jsonify({"ok": True, "data": out})
 
+@app.route("/api/starters")
+def starters():
+    """541 个案例起点库 — 游客可看"""
+    p = os.path.join(BASE, "data", "starters.json")
+    if not os.path.exists(p):
+        return jsonify({"ok": False, "msg": "起点库缺失"}), 404
+    with open(p) as f:
+        return jsonify({"ok": True, "data": json.load(f)})
+
 @app.route("/lens")
 def lens_page():
     """Three.js 镜头效果预览页"""

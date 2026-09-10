@@ -149,7 +149,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
     <div class="s-title">生成参数</div>
     <div class="out-box" id="paramOut">调节上方参数，生成可直接使用的英文摄影参数。</div>
     <div class="actions">
-      <button class="btn btn-gold" id="copyBtn">复制参数</button>
+      <button class="btn btn-gold" id="toStudioBtn">→ 应用到工作台</button>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn" id="copyBtn">复制参数</button>
       <button class="btn" id="resetBtn">重置</button>
     </div>
     <div class="hint">💡 主体大小保持不变时，<b>焦距越长，背景越"贴"</b>（空间压缩）；焦距越短，前景越夸张。</div>
@@ -389,6 +392,16 @@ document.getElementById('resetBtn').onclick=()=>{
 };
 document.getElementById('copyBtn').onclick=async()=>{
   try{await navigator.clipboard.writeText(getSnippet());toast('✅ 参数已复制')}catch(e){toast('复制失败')}
+};
+document.getElementById('toStudioBtn').onclick=()=>{
+  const ap=AP_PRESETS[apIdx];
+  const data={
+    focal:fl, aperture:ap, snippet:getSnippet(),
+    lensName:`${fl}mm f/${ap}`, comp:compLabel(fl), dof:dofLabel(ap)
+  };
+  try{localStorage.setItem('pa-lens',JSON.stringify(data));}catch(e){}
+  toast('已应用到工作台，正在跳转…');
+  setTimeout(()=>{location.href='/'},700);
 };
 document.getElementById('autoBtn').onclick=()=>{autoRotate=!autoRotate;toast(autoRotate?'自动环视开':'自动环视关')};
 
