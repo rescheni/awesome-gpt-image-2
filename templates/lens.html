@@ -3,57 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>镜头效果预览 · Prompt Atelier</title>
+<title>镜头工作台 · Prompt Atelier</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root,[data-theme="dark"]{
-  --bg:#0a0a0f;--bg2:#101018;--bg3:#16161f;--card:rgba(255,255,255,.035);
-  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
-  --text:#e8e6e1;--text2:#8a8a93;--text3:#5a5a63;
+  --bg:#08080d;--bg2:#0f0f17;--border:rgba(255,255,255,.075);--border2:rgba(255,255,255,.15);
+  --text:#eae8e3;--text2:#8f8f99;--text3:#5c5c66;
   --accent:#c9a96a;--accent2:#e8d5a8;--purple:#8b7cf6;
-  --input-bg:rgba(255,255,255,.03);--hover:rgba(255,255,255,.045);
+  --input:rgba(255,255,255,.03);--hover:rgba(255,255,255,.05);--shadow:0 20px 60px rgba(0,0,0,.5);
 }
 [data-theme="light"]{
-  --bg:#f4f2ee;--bg2:#ffffff;--bg3:#faf9f6;--card:rgba(0,0,0,.02);
-  --border:rgba(0,0,0,.09);--border2:rgba(0,0,0,.16);
-  --text:#26241f;--text2:#6b675e;--text3:#96918a;
-  --accent:#a8813c;--accent2:#8a6a2e;--purple:#6d5ce6;
-  --input-bg:rgba(0,0,0,.025);--hover:rgba(0,0,0,.035);
+  --bg:#f2f0eb;--bg2:#fff;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.16);
+  --text:#232019;--text2:#6a655c;--text3:#98928a;
+  --accent:#a67f38;--accent2:#87682c;--purple:#6252e0;
+  --input:rgba(0,0,0,.022);--hover:rgba(0,0,0,.035);--shadow:0 16px 44px rgba(70,58,34,.12);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:background .35s,color .35s}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:54px;
-  background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:background .3s,color .3s}
+.top{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:54px;
+  background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
 .logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit}
 .logo-mark{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--purple));
   display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
-.logo-name{font-family:'Space Grotesk';font-size:14px;letter-spacing:.4px;font-weight:600}
+.logo-name{font-family:'Space Grotesk';font-size:14px;font-weight:600}
 .logo-name em{font-style:normal;color:var(--accent);font-weight:400}
-.btn{border:1px solid var(--border);background:var(--card);color:var(--text);padding:6px 13px;border-radius:8px;
-  font-size:12px;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none;display:inline-block}
+.btn{border:1px solid var(--border);background:var(--input);color:var(--text);padding:6px 13px;border-radius:8px;
+  font-size:12px;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none;display:inline-block;white-space:nowrap}
 .btn:hover{background:var(--hover);border-color:var(--border2)}
 .btn-gold{background:linear-gradient(135deg,#d8b877,#b8934f);color:#1a1509;border:none;font-weight:600}
-.icon-btn{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;
-  border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;color:var(--text2)}
-.layout{display:grid;grid-template-columns:1fr 318px;height:calc(100vh - 54px)}
-@media(max-width:900px){.layout{grid-template-columns:1fr;grid-template-rows:60vh auto;overflow-y:auto}}
-#canvasWrap{position:relative;background:#05050a;overflow:hidden}
-#canvasWrap canvas{display:block;width:100%;height:100%}
+.btn-gold:hover{transform:translateY(-1px)}
+.ib{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;
+  border:1px solid var(--border);background:var(--input);cursor:pointer;font-size:13px;color:var(--text2)}
+.layout{display:grid;grid-template-columns:1fr 330px;height:calc(100vh - 54px)}
+@media(max-width:900px){.layout{grid-template-columns:1fr;grid-template-rows:58vh auto;overflow-y:auto}}
+#viewWrap{position:relative;background:#05050a;overflow:hidden}
+#viewWrap canvas{display:block;width:100%;height:100%}
 .hud{position:absolute;pointer-events:none;font-family:'Space Grotesk',monospace}
-.hud-tl{top:14px;left:16px;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
+.hud-tl{top:14px;left:16px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
   border-radius:11px;padding:11px 15px}
-.hud-tl .lens{font-size:24px;font-weight:300;color:#e8d5a8;letter-spacing:.5px}
-.hud-tl .meta{font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px;letter-spacing:1.2px}
-.hud-tr{top:14px;right:16px;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
+.hud-tl .lens{font-size:24px;font-weight:300;color:#e8d5a8}
+.hud-tl .meta{font-size:10.5px;color:rgba(255,255,255,.6);margin-top:3px;letter-spacing:1.1px}
+.hud-tr{top:14px;right:16px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
   border-radius:11px;padding:9px 13px;text-align:right;font-size:10.5px;color:rgba(255,255,255,.62);line-height:1.75}
 .hud-tr b{color:#e8d5a8;font-weight:500}
-.dof-legend{position:absolute;bottom:14px;left:16px;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px 13px;font-size:10px;color:rgba(255,255,255,.55);
-  display:flex;gap:14px;align-items:center;font-family:'Noto Sans SC'}
-.dof-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.ctrl-tip{position:absolute;bottom:14px;right:16px;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px}
+.tip{position:absolute;bottom:14px;left:16px;font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px;font-family:'Noto Sans SC'}
 .side{border-left:1px solid var(--border);background:var(--bg2);padding:16px;overflow-y:auto}
-.side::-webkit-scrollbar{width:3px}.side::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.side::-webkit-scrollbar{width:3px}.side::-webkit-scrollbar-thumb{background:var(--border2)}
 .s-title{font-size:10.5px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:9px;
   display:flex;align-items:center;gap:7px;font-family:'Space Grotesk'}
 .s-title::after{content:"";flex:1;height:1px;background:var(--border)}
@@ -68,50 +63,41 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
   cursor:pointer;transition:.16s;background:transparent;font-family:inherit}
 .preset:hover{color:var(--text);border-color:var(--border2)}
 .preset.on{background:rgba(201,169,106,.15);border-color:rgba(201,169,106,.45);color:var(--accent2)}
-.info-box{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:13px}
+.info-box{background:var(--input);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:13px}
 .info-row{display:flex;justify-content:space-between;font-size:11.5px;padding:3.5px 0}
 .info-row span:first-child{color:var(--text3)}
 .info-row span:last-child{color:var(--text);font-family:'Space Grotesk'}
-.dof-bar-wrap{margin-top:8px}
-.dof-bar{height:6px;border-radius:3px;background:var(--border)}
-.dof-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,rgba(201,169,106,.35),rgba(201,169,106,.85),rgba(201,169,106,.35));transition:.3s}
-.dof-scale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--text3);margin-top:4px}
-.actions{display:flex;gap:8px;margin-top:15px}
+.dof-bar{height:6px;border-radius:3px;background:var(--border);margin-top:8px;overflow:hidden}
+.dof-bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(201,169,106,.35),rgba(201,169,106,.85),rgba(201,169,106,.35));transition:.3s}
+.actions{display:flex;gap:8px;margin-top:14px}
 .actions .btn{flex:1;text-align:center;padding:10px}
-.out-box{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:11px;
-  font-size:11.5px;line-height:1.8;color:var(--text2);white-space:pre-wrap;margin-top:11px;max-height:160px;overflow-y:auto}
-.toast{position:fixed;bottom:22px;right:22px;background:var(--bg2);border:1px solid rgba(201,169,106,.4);
-  color:var(--accent2);padding:9px 20px;border-radius:100px;font-size:12px;z-index:99;
-  transform:translateY(70px);transition:transform .3s;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.toast.show{transform:translateY(0)}
-.hint{font-size:11px;color:var(--text3);line-height:1.75;margin-top:9px;padding:9px 11px;
-  background:var(--input-bg);border-radius:9px;border:1px solid var(--border)}
+.out-box{background:var(--input);border:1px solid var(--border);border-radius:10px;padding:11px;
+  font-size:11.5px;line-height:1.8;color:var(--text2);white-space:pre-wrap;margin-top:11px;max-height:150px;overflow-y:auto}
+.hint{font-size:11px;color:var(--text3);line-height:1.75;margin-top:10px;padding:9px 11px;
+  background:var(--input);border-radius:9px;border:1px solid var(--border)}
 .hint b{color:var(--accent)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);
+  border:1px solid rgba(201,169,106,.45);color:var(--accent2);padding:9px 22px;border-radius:100px;
+  font-size:12px;z-index:99;transition:transform .3s;box-shadow:var(--shadow)}
+.toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
-<div class="topbar">
+<div class="top">
   <a class="logo" href="/"><div class="logo-mark">✦</div><div class="logo-name">Prompt<em>Atelier</em></div></a>
   <div style="display:flex;gap:8px;align-items:center">
-    <span style="font-size:12px;color:var(--text3)">镜头效果预览</span>
-    <button class="icon-btn" id="themeBtn">🌙</button>
-    <button class="icon-btn" id="autoBtn" title="自动环视">⟳</button>
+    <span style="font-size:12px;color:var(--text3)">镜头工作台 · 与工作台同一场景</span>
+    <button class="ib" id="themeBtn">🌙</button>
+    <button class="ib" id="autoBtn" title="自动环视">⟳</button>
     <a class="btn" href="/">← 返回工作台</a>
   </div>
 </div>
 
 <div class="layout">
-  <div id="canvasWrap">
-    <div class="hud hud-tl">
-      <div class="lens" id="hudLens">50mm ƒ/2.8</div>
-      <div class="meta" id="hudMeta">视角 39.6° · 自然透视</div>
-    </div>
+  <div id="viewWrap">
+    <div class="hud hud-tl"><div class="lens" id="hudLens">50mm ƒ/2.8</div><div class="meta" id="hudMeta">视角 39.6°</div></div>
     <div class="hud hud-tr" id="hudTr"></div>
-    <div class="dof-legend">
-      <span><i style="background:#e8d5a8"></i>焦内清晰</span>
-      <span><i style="background:rgba(232,213,168,.35)"></i>焦外虚化</span>
-    </div>
-    <div class="ctrl-tip">拖拽环视 · 滚轮变焦</div>
+    <div class="tip">拖拽环视 · 滚轮变焦</div>
   </div>
 
   <div class="side">
@@ -131,8 +117,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
 
     <div class="s-title">对焦距离 Focus</div>
     <div class="ctrl">
-      <div class="ctrl-lab"><span>焦点位置</span><b id="foVal">主体</b></div>
+      <div class="ctrl-lab"><span>焦点</span><b id="foVal">主体</b></div>
       <input type="range" id="foSlider" min="0" max="100" step="1" value="6">
+    </div>
+
+    <div class="s-title">光线方案 Lighting</div>
+    <div class="ctrl">
+      <div class="presets" id="ltPresets"></div>
     </div>
 
     <div class="s-title">画面信息</div>
@@ -140,22 +131,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
       <div class="info-row"><span>等效视角</span><span id="iFov">39.6°</span></div>
       <div class="info-row"><span>空间压缩</span><span id="iComp">中等</span></div>
       <div class="info-row"><span>景深范围</span><span id="iDof">中</span></div>
-      <div class="dof-bar-wrap">
-        <div class="dof-bar"><i id="dofFill" style="width:40%"></i></div>
-        <div class="dof-scale"><span>近景</span><span>主体</span><span>远景</span></div>
-      </div>
+      <div class="dof-bar"><i id="dofFill" style="width:40%"></i></div>
     </div>
 
     <div class="s-title">生成参数</div>
     <div class="out-box" id="paramOut">调节上方参数，生成可直接使用的英文摄影参数。</div>
-    <div class="actions">
-      <button class="btn btn-gold" id="toStudioBtn">→ 应用到工作台</button>
-    </div>
-    <div class="actions" style="margin-top:8px">
-      <button class="btn" id="copyBtn">复制参数</button>
-      <button class="btn" id="resetBtn">重置</button>
-    </div>
-    <div class="hint">💡 主体大小保持不变时，<b>焦距越长，背景越"贴"</b>（空间压缩）；焦距越短，前景越夸张。</div>
+    <div class="actions"><button class="btn btn-gold" id="toStudioBtn">→ 应用到工作台</button></div>
+    <div class="actions"><button class="btn" id="copyBtn">复制参数</button><button class="btn" id="resetBtn">重置</button></div>
+    <div class="hint">💡 主体大小不变时，<b>焦距越长背景越"贴"</b>（空间压缩）；焦距越短前景越夸张。</div>
   </div>
 </div>
 
@@ -165,206 +148,81 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
 { "imports": { "three": "/static/three.module.min.js" } }
 </script>
 <script type="module">
-import * as THREE from 'three';
+import { createStudio } from '/static/studio-scene.js';
 
 /* ── 主题 ── */
-const THEMES=['auto','dark','light'],TICO={auto:'🌗',dark:'🌙',light:'☀️'};
+const TH=['auto','dark','light'],TI={auto:'🌗',dark:'🌙',light:'☀️'};
 let themeMode=localStorage.getItem('pa-theme')||'auto';
 function applyTheme(){
   const sys=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
-  const eff=themeMode==='auto'?sys:themeMode;
-  document.documentElement.setAttribute('data-theme',eff);
-  document.getElementById('themeBtn').textContent=TICO[themeMode];
+  document.documentElement.setAttribute('data-theme',themeMode==='auto'?sys:themeMode);
+  document.getElementById('themeBtn').textContent=TI[themeMode];
 }
 document.getElementById('themeBtn').onclick=()=>{
-  themeMode=THEMES[(THEMES.indexOf(themeMode)+1)%3];localStorage.setItem('pa-theme',themeMode);applyTheme();
+  themeMode=TH[(TH.indexOf(themeMode)+1)%3];localStorage.setItem('pa-theme',themeMode);applyTheme();
 };
 applyTheme();
 const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)};
 
-/* ── 渲染器 ── */
-const wrap=document.getElementById('canvasWrap');
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(wrap.clientWidth,wrap.clientHeight);
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05;
-wrap.appendChild(renderer.domElement);
-
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x0a0a12);
-scene.fog=new THREE.FogExp2(0x0a0a12,0.0028);
-
-const camera=new THREE.PerspectiveCamera(39.6,wrap.clientWidth/wrap.clientHeight,0.1,600);
-
-/* ── 灯光 ── */
-scene.add(new THREE.AmbientLight(0x6a6a90,2.0));
-const key=new THREE.DirectionalLight(0xffe2b8,2.6);
-key.position.set(7,12,9);key.castShadow=true;
-key.shadow.mapSize.set(2048,2048);
-const sc=key.shadow.camera;sc.near=1;sc.far=70;sc.left=-22;sc.right=22;sc.top=22;sc.bottom=-22;
-scene.add(key);
-const rim=new THREE.DirectionalLight(0x8b7cf6,2.4);
-rim.position.set(-9,6,-12);scene.add(rim);
-const fill=new THREE.DirectionalLight(0xc9a96a,1.4);
-fill.position.set(3,3,14);scene.add(fill);
-const side=new THREE.DirectionalLight(0xffd9a0,1.8);
-side.position.set(-7,4,3);side.castShadow=false;scene.add(side);
-
-/* ── 地面(带反射感) ── */
-const ground=new THREE.Mesh(
-  new THREE.PlaneGeometry(160,320),
-  new THREE.MeshStandardMaterial({color:0x1a1a26,roughness:.42,metalness:.5})
-);
-ground.rotation.x=-Math.PI/2;ground.position.z=-70;ground.receiveShadow=true;scene.add(ground);
-
-/* 距离刻度线(每5米)，帮助感知纵深 */
-const marks=[];
-for(let z=0;z>=-90;z-=5){
-  const g=new THREE.PlaneGeometry(13,0.055);
-  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x3a3a52,transparent:true,opacity:.75}));
-  m.rotation.x=-Math.PI/2;m.position.set(0,0.012,z-2.5);
-  scene.add(m);marks.push(m);
-}
-
-/* ── 主体：人形示意模型 ── */
-const subject=new THREE.Group();
-const skin=new THREE.MeshStandardMaterial({color:0xe6d6c4,roughness:.62,metalness:.02});
-const cloth=new THREE.MeshStandardMaterial({color:0xd8cfc0,roughness:.78,metalness:.03});
-/* 头 */
-const head=new THREE.Mesh(new THREE.SphereGeometry(0.235,32,26),skin);
-head.position.y=1.83;head.castShadow=true;subject.add(head);
-/* 颈 */
-const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.1,0.16,16),skin);
-neck.position.y=1.63;subject.add(neck);
-/* 躯干 */
-const torso=new THREE.Mesh(new THREE.CapsuleGeometry(0.29,0.72,10,24),cloth);
-torso.position.y=1.2;torso.castShadow=true;subject.add(torso);
-/* 手臂 */
-[1,-1].forEach(s=>{
-  const arm=new THREE.Mesh(new THREE.CapsuleGeometry(0.075,0.62,8,16),cloth);
-  arm.position.set(s*0.37,1.2,0);arm.rotation.z=s*0.14;arm.castShadow=true;subject.add(arm);
-});
-/* 腿 */
-[1,-1].forEach(s=>{
-  const leg=new THREE.Mesh(new THREE.CapsuleGeometry(0.1,0.78,8,16),cloth);
-  leg.position.set(s*0.14,0.5,0);leg.castShadow=true;subject.add(leg);
-});
-/* 脚下光圈标记(贴地, 半透明) */
-const ring=new THREE.Mesh(new THREE.RingGeometry(0.44,0.5,56),
-  new THREE.MeshBasicMaterial({color:0xc9a96a,side:THREE.DoubleSide,transparent:true,opacity:.52,depthWrite:false}));
-ring.rotation.x=-Math.PI/2;ring.position.y=0.018;subject.add(ring);
-subject.position.x=-0.75;
-scene.add(subject);
-
-/* ── 走廊柱阵(核心视觉: 展示空间压缩) ── */
-const pillars=[];
-const pillarGeo=new THREE.BoxGeometry(0.62,4.6,0.62);
-const N_PILLAR=20;
-for(let i=0;i<N_PILLAR;i++){
-  const z=-2.4-i*2.9;
-  const base = i%2 ? 0x6a6a8e : 0x54547a;
-  [1,-1].forEach(side=>{
-    const mat=new THREE.MeshStandardMaterial({color:base,roughness:.62,metalness:.28,transparent:true,opacity:1});
-    const p=new THREE.Mesh(pillarGeo,mat);
-    p.position.set(side*3.5,2.3,z);
-    p.castShadow=true;p.receiveShadow=true;
-    p.userData={z,base};
-    scene.add(p);pillars.push(p);
-  });
-  /* 柱顶发光条（增强纵深线索） */
-  const glow=new THREE.Mesh(new THREE.BoxGeometry(0.68,0.07,0.68),
-    new THREE.MeshBasicMaterial({color:0xc9a96a,transparent:true,opacity:.85}));
-  glow.position.set(3.5,4.62,z);scene.add(glow);pillars.push(glow);
-  const glow2=glow.clone();glow2.position.x=-3.5;scene.add(glow2);pillars.push(glow2);
-}
-
-/* 远景墙 + 光点 */
-const wall=new THREE.Mesh(new THREE.PlaneGeometry(80,18),
-  new THREE.MeshStandardMaterial({color:0x1e1e2e,roughness:.92,transparent:true,opacity:1}));
-wall.position.set(0,9,-62);scene.add(wall);
-const lights=[];
-for(let i=0;i<16;i++){
-  const s=Math.random()*0.14+0.06;
-  const m=new THREE.Mesh(new THREE.SphereGeometry(s,12,10),
-    new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(0.08+Math.random()*0.6,0.8,0.64)}));
-  m.position.set((Math.random()-0.5)*26,Math.random()*6+0.5,-10-Math.random()*44);
-  scene.add(m);lights.push(m);
-}
-
-/* ── 参数 ── */
+/* ── 场景(与工作台共用) ── */
+let studio=null, fl=50, apIdx=4, focusZ=-2.0, lightIdx=0;
 const FL_PRESETS=[14,24,35,50,85,135,200];
 const AP_PRESETS=[0.95,1.2,1.4,2,2.8,4,5.6,8,11,16];
-let fl=50, apIdx=4, focusZ=0.1, autoRotate=true, orbitY=0, orbitX=0;
+const LT_PRESETS=[['自然光',''],['黄金时刻','golden hour warm sunlight'],['冷调','blue hour cold overcast'],
+  ['霓虹','neon cyberpunk night'],['暖光','cozy candle indoor window light'],['低调光','low key dramatic rembrandt'],
+  ['高调光','high key bright airy']];
 
+function init(){
+  studio=createStudio(document.getElementById('viewWrap'));
+  studio.setPerson(true,{cloth:0xd8cfc0,hair:0x241e1a});
+  studio.setAutoRotate(true);
+  buildPresets();
+  addEventListener('resize',()=>studio.resize());
+  update();
+}
 const focalToFov=f=>2*Math.atan(36/(2*f))*180/Math.PI;
-const focalToDist=f=>5.2*(f/50);      /* 主体视觉大小恒定的相机距离 */
 
 function buildPresets(){
-  const flW=document.getElementById('flPresets');
-  flW.innerHTML=FL_PRESETS.map(v=>`<button class="preset" data-fl="${v}">${v}mm</button>`).join('');
-  flW.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{fl=+b.dataset.fl;document.getElementById('flSlider').value=fl;update()});
-  const apW=document.getElementById('apPresets');
-  apW.innerHTML=AP_PRESETS.map((v,i)=>`<button class="preset" data-i="${i}">ƒ/${v}</button>`).join('');
-  apW.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{apIdx=+b.dataset.i;document.getElementById('apSlider').value=apIdx;update()});
+  const fw=document.getElementById('flPresets');
+  fw.innerHTML=FL_PRESETS.map(v=>`<button class="preset" data-fl="${v}">${v}mm</button>`).join('');
+  fw.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{fl=+b.dataset.fl;document.getElementById('flSlider').value=fl;update()});
+  const aw=document.getElementById('apPresets');
+  aw.innerHTML=AP_PRESETS.map((v,i)=>`<button class="preset" data-i="${i}">ƒ/${v}</button>`).join('');
+  aw.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{apIdx=+b.dataset.i;document.getElementById('apSlider').value=apIdx;update()});
+  const lw=document.getElementById('ltPresets');
+  lw.innerHTML=LT_PRESETS.map(([n],i)=>`<button class="preset ${i===0?'on':''}" data-i="${i}">${n}</button>`).join('');
+  lw.querySelectorAll('.preset').forEach(b=>b.onclick=()=>{lightIdx=+b.dataset.i;update()});
 }
-buildPresets();
 
 const dofLabel=a=>a<=0.95?'极浅(刀锋)':a<=1.4?'极浅':a<=2.8?'浅':a<=5.6?'中':a<=11?'深':'全景深';
 const compLabel=f=>f<=20?'极弱(空间张开)':f<=35?'较弱':f<=60?'中等(接近人眼)':f<=100?'较强':f<=160?'强(背景贴合)':'极强(重度压缩)';
 
-let hoverPillar=null;
 function update(){
-  const fov=focalToFov(fl), dist=focalToDist(fl);
-  camera.fov=fov;camera.updateProjectionMatrix();
   const ap=AP_PRESETS[apIdx];
-  /* 半景深范围(米) — 光圈越小越深 */
-  const dofHalf = ap<=0.95? 1.1 : ap<=1.4? 1.8 : ap<=2? 2.6 : ap<=2.8? 4.2 : ap<=4? 7 : ap<=5.6? 11 : ap<=8? 18 : ap<=11? 28 : 42;
-
-  /* 主体与柱子: 依据与焦平面距离做散景化(缩放+降不透明度, 而非消失) */
-  const apply = (obj, z, baseColor) => {
-    const d=Math.abs(z-focusZ);
-    const over=Math.max(0,(d-dofHalf)/dofHalf);
-    const k=Math.min(1,over*0.85);
-    obj.material.opacity = 1 - k*0.34;         /* 最低保留 66% 可见, 保持柱阵结构 */
-    obj.material.transparent = obj.material.opacity < 0.995;
-    const s = 1 + k*0.4;                        /* 轻微散景扩散 */
-    obj.scale.set(s,s,s);
-  };
-  pillars.forEach(p=>{
-    if(p.userData.z===undefined)return;
-    apply(p, p.userData.z, p.userData.base);
-  });
-  lights.forEach(l=>{
-    const d=Math.abs(l.position.z-focusZ);
-    l.material.opacity = 0.22 + 0.5*Math.min(1, dofHalf/16);
-  });
-  wall.material.opacity = Math.max(0.14, 1-Math.max(0,(Math.abs(-62-focusZ)-dofHalf)/(dofHalf*2.2)));
-  /* 主体默认保持清晰(焦点在主体上时) */
-
-  /* HUD */
+  studio.setLens(fl,ap);
+  studio.setFocus(focusZ);
+  studio.setLighting(LT_PRESETS[lightIdx][1]);
+  studio.setAtmosphere(LT_PRESETS[lightIdx][1]);
+  const fov=focalToFov(fl);
   document.getElementById('hudLens').textContent=`${fl}mm ƒ/${ap}`;
   document.getElementById('hudMeta').textContent=`视角 ${fov.toFixed(1)}° · ${compLabel(fl)}`;
   document.getElementById('flVal').textContent=fl+'mm';
   document.getElementById('apVal').textContent='ƒ/'+ap;
-  document.getElementById('foVal').textContent = focusZ>5?'前景':focusZ<-6?'远景':'主体(焦点)';
+  document.getElementById('foVal').textContent=focusZ>-1?'前景':focusZ<-6?'远景':'主体';
   document.getElementById('iFov').textContent=fov.toFixed(1)+'°';
   document.getElementById('iComp').textContent=compLabel(fl);
   document.getElementById('iDof').textContent=dofLabel(ap);
-  document.getElementById('hudTr').innerHTML=`相机距离 <b>${dist.toFixed(1)}m</b><br>景深 <b>${dofLabel(ap)}</b> · ±${dofHalf.toFixed(1)}m`;
+  const dofHalf=ap<=0.95?0.7:ap<=1.4?1.2:ap<=2?2.0:ap<=2.8?3.0:ap<=5.6?6:14;
+  document.getElementById('hudTr').innerHTML=`相机距离 <b>${(3.9*Math.max(.35,Math.min(4,fl/50))).toFixed(1)}m</b><br>景深 <b>${dofLabel(ap)}</b> · ±${dofHalf.toFixed(1)}m`;
   document.getElementById('dofFill').style.width=Math.min(100,(dofHalf/20)*100)+'%';
-
   document.querySelectorAll('#flPresets .preset').forEach(b=>b.classList.toggle('on',+b.dataset.fl===fl));
   document.querySelectorAll('#apPresets .preset').forEach(b=>b.classList.toggle('on',+b.dataset.i===apIdx));
-  document.getElementById('paramOut').textContent=getSnippet();
+  document.querySelectorAll('#ltPresets .preset').forEach(b=>b.classList.toggle('on',+b.dataset.i===lightIdx));
+  document.getElementById('paramOut').textContent=snip();
 }
 
-function getSnippet(){
+function snip(){
   const ap=AP_PRESETS[apIdx];
-  const lensMap={14:'14mm f/2.8 ultra-wide angle',24:'24mm wide prime',35:'35mm f/1.4',50:'50mm standard prime',85:'85mm f/1.4 portrait lens',135:'135mm f/1.8 telephoto',200:'200mm f/2 telephoto'};
-  const lens=lensMap[fl]||`${fl}mm lens`;
   const bits=[`shot at ${fl}mm, aperture f/${ap}`];
   if(fl<=20)bits.push('exaggerated wide-angle perspective, expanded space');
   else if(fl<=35)bits.push('mild wide-angle perspective');
@@ -373,71 +231,51 @@ function getSnippet(){
   else bits.push('strong background compression, flattened layered depth');
   bits.push(ap<=2.8?'shallow depth of field, creamy bokeh separation':'deep focus, foreground to background clarity');
   if(ap<=1.4)bits.push('only the subject tack sharp, background fully dissolved');
+  if(lightIdx)bits.push(LT_PRESETS[lightIdx][1]);
   return bits.join(', ');
 }
 
 /* ── 交互 ── */
 document.getElementById('flSlider').oninput=e=>{fl=+e.target.value;update()};
 document.getElementById('apSlider').oninput=e=>{apIdx=+e.target.value;update()};
-document.getElementById('foSlider').oninput=e=>{
-  const v=+e.target.value;
-  focusZ = 3 - (v/100)*48;      /* v=0 前景(+3m) → v=100 远景(-45m), v≈6 落在主体 */
-  update();
-};
+document.getElementById('foSlider').oninput=e=>{focusZ=3-(+e.target.value/100)*30;update()};
 document.getElementById('resetBtn').onclick=()=>{
-  fl=50;apIdx=4;orbitY=0;orbitX=0;
+  fl=50;apIdx=4;lightIdx=0;focusZ=-2.0;
   document.getElementById('flSlider').value=50;document.getElementById('apSlider').value=4;
-  document.getElementById('foSlider').value=6;focusZ=3-(0.06*48);
-  update();toast('已重置');
+  document.getElementById('foSlider').value=6;update();toast('已重置');
 };
 document.getElementById('copyBtn').onclick=async()=>{
-  try{await navigator.clipboard.writeText(getSnippet());toast('✅ 参数已复制')}catch(e){toast('复制失败')}
+  try{await navigator.clipboard.writeText(snip());toast('✅ 参数已复制')}catch(e){toast('复制失败')}
 };
 document.getElementById('toStudioBtn').onclick=()=>{
-  const ap=AP_PRESETS[apIdx];
-  const data={
-    focal:fl, aperture:ap, snippet:getSnippet(),
-    lensName:`${fl}mm f/${ap}`, comp:compLabel(fl), dof:dofLabel(ap)
-  };
-  try{localStorage.setItem('pa-lens',JSON.stringify(data));}catch(e){}
+  const data={focal:fl,aperture:AP_PRESETS[apIdx],snippet:snip(),
+    lensName:`${fl}mm f/${AP_PRESETS[apIdx]}`,comp:compLabel(fl),dof:dofLabel(AP_PRESETS[apIdx])};
+  try{localStorage.setItem('pa-lens',JSON.stringify(data))}catch(e){}
   toast('已应用到工作台，正在跳转…');
-  setTimeout(()=>{location.href='/'},700);
+  setTimeout(()=>{location.href='/'},650);
 };
-document.getElementById('autoBtn').onclick=()=>{autoRotate=!autoRotate;toast(autoRotate?'自动环视开':'自动环视关')};
+document.getElementById('autoBtn').onclick=()=>{toast('自动环视已切换')};
 
-let dragging=false,lx=0,ly=0;
-const cv=renderer.domElement;
-cv.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY});
+/* 拖拽环视 */
+let dragging=false,lx=0,ly=0,oy=0,ox=0;
+const cv=()=>document.querySelector('#viewWrap canvas');
+document.addEventListener('pointerdown',e=>{if(e.target.tagName==='CANVAS'){dragging=true;lx=e.clientX;ly=e.clientY}});
 addEventListener('pointerup',()=>dragging=false);
 addEventListener('pointermove',e=>{
-  if(!dragging)return;
-  orbitY+=(e.clientX-lx)*0.005;
-  orbitX=Math.max(-0.3,Math.min(0.45,orbitX+(e.clientY-ly)*0.0022));
-  lx=e.clientX;ly=e.clientY;autoRotate=false;
+  if(!dragging||!studio)return;
+  oy+=(e.clientX-lx)*0.005;ox=Math.max(-.3,Math.min(.45,ox+(e.clientY-ly)*0.0022));
+  lx=e.clientX;ly=e.clientY;
+  studio.setOrbit(oy,ox);studio.setAutoRotate(false);
 });
-cv.addEventListener('wheel',e=>{
+addEventListener('wheel',e=>{
+  if(!e.target.closest('#viewWrap'))return;
   e.preventDefault();
   fl=Math.max(14,Math.min(200,fl+(e.deltaY>0?4:-4)));
   document.getElementById('flSlider').value=fl;update();
 },{passive:false});
 
-/* ── 渲染循环 ── */
-function animate(){
-  requestAnimationFrame(animate);
-  const dist=focalToDist(fl);
-  if(autoRotate)orbitY+=0.0014;
-  /* 相机绕主体弧线运动(小角度), 保持看向主体 */
-  const swing=Math.sin(orbitY)*0.35;
-  camera.position.set(Math.sin(swing)*dist*0.55, 1.55+orbitX*dist*0.4, Math.cos(swing)*dist);
-  camera.lookAt(-0.35,1.2,0);
-  renderer.render(scene,camera);
-}
-addEventListener('resize',()=>{
-  renderer.setSize(wrap.clientWidth,wrap.clientHeight);
-  camera.aspect=wrap.clientWidth/wrap.clientHeight;camera.updateProjectionMatrix();
-});
-focusZ=3-(0.06*48);
-update();animate();
+focusZ=3-(6/100)*30;
+init();
 </script>
 </body>
 </html>

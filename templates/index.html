@@ -310,6 +310,7 @@ input:checked+.sll:before{transform:translateX(17px)}
 </script>
 <script type="module">
 import * as THREE from 'three';
+import { createStudio, guessColors } from '/static/studio-scene.js';
 
 /* ═══════ 状态 ═══════ */
 const BLOCKS = [
@@ -658,7 +659,7 @@ function pickCase(cid){
   let prompt=(st.prompt||'').trim();
   let split=null;
 
-  /* 案例可能是 JSON 结构 → 智能拆到各块 */
+  /* ① JSON 结构案例 → 按字段拆 */
   if(prompt.startsWith('{')){
     try{
       const o=JSON.parse(prompt);
@@ -670,25 +671,54 @@ function pickCase(cid){
       if(o.composition)split.composition=o.composition;
       if(o.atmosphere)split.color=o.atmosphere;
       prompt=scene||prompt;
-    }catch(e){/* 保持原样 */}
+    }catch(e){}
+  }
+
+  /* ② 自然语言案例 → 启发式拆句归类 */
+  if(!split){
+    const segs=prompt.split(/[,;.]\s+/).map(x=>x.trim()).filter(x=>x.length>4);
+    const cat={style:[],lighting:[],color:[],composition:[],grading:[],gear:[],subject:[]};
+    segs.forEach(seg=>{
+      const t=seg.toLowerCase();
+      if(/\b(light|lighting|sunlight|shadow|illuminat|glow|golden hour|backlit|neon)\b/.test(t)
+         ||/光照|光线|阳光|阴影/.test(seg)) cat.lighting.push(seg);
+      else if(/palette|colour|color tone|color scheme|\bhue\b|monochrom|pastel|saturat|duotone|grading|色调|配色|色彩|muted|sage|olive|beige|teal|indigo|crimson|emerald|amber|charcoal|ivory|navy|maroon|lavender|turquoise|(warm|pale|soft|deep|rich|dark)\s+(green|blue|red|grey|gray|yellow|orange|pink|purple|brown|white|black)/i.test(t)) cat.color.push(seg);
+      else if(/\d+\s*mm|f\s*\/\s*\d|bokeh|depth of field|shutter|iso\s*\d|lens\b|camera|焦段|光圈|快门/.test(t)) cat.gear.push(seg);
+      else if(/composition|wide-angle|close-up|perspective|framing|\bangle\b|layout|symmetr|crop|focal point|构图|机位|景别/.test(t)) cat.composition.push(seg);
+      else if(/style|illustration|realistic|cinematic|anime|watercolor|vector|3d render|art\b|aesthetic|poster art|photograph|film|风格|插画/.test(t)) cat.style.push(seg);
+      else cat.subject.push(seg);
+    });
+    /* 有把握的才拆(每类至少1句且不属于主体主导) */
+    const hasAny=(cat.style.length+cat.lighting.length+cat.color.length+cat.composition.length+cat.gear.length)>0;
+    if(hasAny){
+      split={
+        subject: (cat.subject.length?cat.subject.join(', '):prompt.slice(0,400)),
+        style: cat.style.join(', '),
+        lighting: cat.lighting.join(', '),
+        color: cat.color.join(', '),
+        composition: cat.composition.join(', '),
+        gear: cat.gear.join(', ')
+      };
+    }
   }
 
   if(split){
-    /* 结构化案例: 分配到对应块 */
-    if(split.subject)S.blocks.subject.text=split.subject.slice(0,700);
-    if(split.lighting)S.blocks.lighting.text=split.lighting.slice(0,400);
-    if(split.style)S.blocks.style.text=split.style.slice(0,300);
-    if(split.composition)S.blocks.composition.text=split.composition.slice(0,400);
-    if(split.color)S.blocks.color.text=split.color.slice(0,200);
-    toast('已载入案例「'+st.title+'」· 已拆分到 5 个块');
+    /* 完整原文保留在主体块(不丢信息) + 各类描述追加到对应块(让3D与提示词都生效) */
+    S.blocks.subject.text=prompt.slice(0,700);
+    const put=(f,txt)=>{if(txt&&txt.trim())S.blocks[f].text=((S.blocks[f].text?S.blocks[f].text+' | ':'')+txt).slice(0,480)};
+    put('style',split.style); put('lighting',split.lighting);
+    put('color',split.color); put('composition',split.composition); put('gear',split.gear);
+    if(split.subject&&split.subject!==prompt)S.blocks.subject.text=prompt.slice(0,700);
+    const n=['style','lighting','color','composition','gear'].filter(f=>split[f]).length;
+    toast(`已载入「${st.title}」· 全文入主体 + ${n}类已归类`);
   } else {
     S.blocks.subject.text=prompt.slice(0,700);
     toast('已载入案例：'+st.title);
   }
-  renderBlocks();renderOpts();switchSrc('case');switchRight('opt');
+
+  renderBlocks();renderOpts();switchSrc('case');
   if(window.__update3D)window.__update3D();
-  /* 自动切到 3D 看效果 */
-  setTimeout(()=>{if(window.__update3D)window.__update3D()},300);
+  setTimeout(()=>{if(window.__update3D)window.__update3D()},260);
 }
 
 /* ═══════ 右侧视图 ═══════ */
@@ -792,381 +822,57 @@ async function saveTpl(){
   if(r.ok){toast('已保存');closeModal('tplModal');loadMyTpls()}else toast(r.msg||'失败');
 }
 
-/* ═══════ 3D 实时预览(响应所有选择) ═══════ */
-let scene3,cam3,ren3,wrap3,ready3=false,initDone=false;
-let person3,personParts={},furn3=[],pillars3=[],winLight,keyL,rimL,ambL,floorMesh,backWall,spotL;
-
+/* ═══════ 3D 实时预览(与镜头工作台共用同一场景) ═══════ */
+let studio3d=null;
 function init3D(){
-  if(initDone)return;initDone=true;
-  wrap3=$('viewWrap');
-  const W=()=>Math.max(wrap3.clientWidth,220), H=()=>Math.max(wrap3.clientHeight,320);
-
-  ren3=new THREE.WebGLRenderer({antialias:true});
-  ren3.setPixelRatio(Math.min(devicePixelRatio,2));ren3.setSize(W(),H());
-  ren3.shadowMap.enabled=true;ren3.shadowMap.type=THREE.PCFSoftShadowMap;
-  ren3.toneMapping=THREE.ACESFilmicToneMapping;ren3.toneMappingExposure=1.5;
-  wrap3.appendChild(ren3.domElement);
-
-  scene3=new THREE.Scene();
-  scene3.background=new THREE.Color(0x0a0a12);
-  scene3.fog=new THREE.FogExp2(0x0a0a12,0.022);
-
-  cam3=new THREE.PerspectiveCamera(42,W()/H(),0.1,200);
-
-  /* ── 灯光 ── */
-  ambL=new THREE.AmbientLight(0x9094b8,2.9);scene3.add(ambL);
-  keyL=new THREE.DirectionalLight(0xffe0b8,2.6);
-  keyL.position.set(4.5,7.5,5);keyL.castShadow=true;
-  keyL.shadow.mapSize.set(1024,1024);
-  const sc=keyL.shadow.camera;sc.near=1;sc.far=40;sc.left=-9;sc.right=9;sc.top=9;sc.bottom=-9;
-  scene3.add(keyL);
-  rimL=new THREE.DirectionalLight(0x8b7cf6,1.8);rimL.position.set(-6,4,-5);scene3.add(rimL);
-  spotL=new THREE.SpotLight(0xffffff,0,12,0.7,0.6,1.2);
-  spotL.position.set(0,6,2);spotL.target.position.set(0,1,0);
-  scene3.add(spotL);scene3.add(spotL.target);
-
-  /* ── 室内空间 ── */
-  /* 地板 */
-  floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(40,40),
-    new THREE.MeshStandardMaterial({color:0x4a423a,roughness:.5,metalness:.15}));
-  floorMesh.rotation.x=-Math.PI/2;floorMesh.receiveShadow=true;scene3.add(floorMesh);
-  /* 后墙 */
-  backWall=new THREE.Mesh(new THREE.PlaneGeometry(40,16),
-    new THREE.MeshStandardMaterial({color:0x3a3a4a,roughness:.85}));
-  backWall.position.set(0,8,-9);scene3.add(backWall);
-  /* 侧墙 */
-  const sideMat=new THREE.MeshStandardMaterial({color:0x343444,roughness:.88});
-  const sl=new THREE.Mesh(new THREE.PlaneGeometry(40,16),sideMat);
-  sl.rotation.y=Math.PI/2;sl.position.set(-8,8,0);scene3.add(sl);
-  const sr=new THREE.Mesh(new THREE.PlaneGeometry(40,16),sideMat);
-  sr.rotation.y=-Math.PI/2;sr.position.set(8,8,0);scene3.add(sr);
-  /* 窗户(发光面, 作为光源可视锚点) */
-  winLight=new THREE.Mesh(new THREE.PlaneGeometry(3.6,2.6),
-    new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.95}));
-  winLight.position.set(-7.9,2.6,-1);winLight.rotation.y=Math.PI/2;scene3.add(winLight);
-  const winFrame=new THREE.Mesh(new THREE.PlaneGeometry(3.9,2.9),
-    new THREE.MeshBasicMaterial({color:0x0a0a12}));
-  winFrame.position.set(-7.95,2.6,-1);winFrame.rotation.y=Math.PI/2;scene3.add(winFrame);
-
-  /* ── 家具道具(体现空间与景深) ── */
-  const furn=(geo,color,x,y,z,rough=.7,metal=.05)=>{
-    const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal}));
-    m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene3.add(m);furn3.push(m);return m;
-  };
-  /* 桌子 */
-  furn(new THREE.BoxGeometry(2.2,.09,1.1),0x8a6a48,0,.75,-2.6,.6);
-  furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,-1,.38,-2.8,.65);
-  furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,1,.38,-2.8,.65);
-  furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,-1,.38,-3.6,.65);
-  furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,1,.38,-3.6,.65);
-  /* 椅子 */
-  furn(new THREE.BoxGeometry(.72,.07,.72),0x9a7c58,1.9,.46,-1.1,.62);
-  furn(new THREE.BoxGeometry(.72,.85,.07),0x9a7c58,1.9,.88,-0.75,.62);
-  /* 花瓶 + 植物 */
-  furn(new THREE.CylinderGeometry(.14,.19,.42,16),0xd0c8b8,-1.35,1.0,-2.6,.4,.25);
-  furn(new THREE.SphereGeometry(.34,16,12),0x4f8a55,-1.35,1.6,-2.6,.85);
-  /* 落地灯 */
-  furn(new THREE.CylinderGeometry(.02,.02,2.2,10),0x333340,2.6,1.1,-3.4,.5,.4);
-  furn(new THREE.CylinderGeometry(.26,.34,.34,18),0xf0e0b8,2.6,2.3,-2.9,.8);
-  /* 画框 */
-  furn(new THREE.BoxGeometry(1.3,1.7,.06),0x3a3428,-2.6,2.4,-8.8,.7);
-  /* 书架 */
-  furn(new THREE.BoxGeometry(.5,1.9,1.4),0x59493a,3.4,.95,-6.2,.75);
-  furn(new THREE.BoxGeometry(.12,.06,1.3),0x8a7256,3.1,1.5,-6.2,.7);
-  furn(new THREE.BoxGeometry(.12,.06,1.3),0x8a7256,3.1,1.05,-6.2,.7);
-  /* 矮几+摆件 */
-  furn(new THREE.BoxGeometry(1.1,.08,.6),0x6e5740,-2.3,.42,-2.0,.65);
-  furn(new THREE.SphereGeometry(.11,14,12),0xb8934f,-2.3,.58,-2.0,.35,.6);
-  /* 靠墙绿植(高) */
-  furn(new THREE.CylinderGeometry(.2,.26,.5,16),0x8a7a68,-4.2,.25,-7.6,.8);
-  furn(new THREE.SphereGeometry(.48,16,12),0x3d6b42,-4.2,1.0,-7.6,.9);
-  furn(new THREE.SphereGeometry(.34,14,12),0x4a7d4e,-3.9,.7,-7.4,.9);
-  /* 地毯 */
-  const rug=new THREE.Mesh(new THREE.PlaneGeometry(4.6,3.2),
-    new THREE.MeshStandardMaterial({color:0x3a3238,roughness:.95}));
-  rug.rotation.x=-Math.PI/2;rug.position.set(0,.012,-2.6);rug.receiveShadow=true;scene3.add(rug);
-
-  /* ── 发光装饰(灯带/灯管, 随光线选择变色) ── */
-  const glowMat=new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.9});
-  const strip1=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,7),glowMat);
-  strip1.position.set(-7.85,3.6,-2);scene3.add(strip1);
-  const strip2=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,7),glowMat.clone());
-  strip2.position.set(7.85,3.6,-2);scene3.add(strip2);
-  const strip3=new THREE.Mesh(new THREE.BoxGeometry(6,.05,.05),glowMat.clone());
-  strip3.position.set(-2.4,4.4,-8.85);scene3.add(strip3);
-  const strip4=new THREE.Mesh(new THREE.BoxGeometry(6,.05,.05),glowMat.clone());
-  strip4.position.set(2.4,4.4,-8.85);scene3.add(strip4);
-  window.__glowStrips=[strip1,strip2,strip3,strip4];
-  /* 地板反射光斑 */
-  const pool1=new THREE.Mesh(new THREE.CircleGeometry(1.7,32),
-    new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.12}));
-  pool1.rotation.x=-Math.PI/2;pool1.position.set(-1.4,.02,-1.6);scene3.add(pool1);
-  window.__glowPools=[pool1];
-
-  /* ── 人物 ── */
-  person3=new THREE.Group();
-  const skinM=new THREE.MeshStandardMaterial({color:0xe8d6c2,roughness:.62});
-  const hairM=new THREE.MeshStandardMaterial({color:0x241e1a,roughness:.75});
-  const clothM=new THREE.MeshStandardMaterial({color:0xcfc6b6,roughness:.82});
-  const shoeM=new THREE.MeshStandardMaterial({color:0x2a2a32,roughness:.6});
-  /* 头 */
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.225,32,26),skinM);
-  head.position.y=1.72;head.castShadow=true;person3.add(head);
-  /* 头发(后脑+顶部, 留出面部) */
-  const hair=new THREE.Mesh(new THREE.SphereGeometry(.238,32,26,Math.PI*0.62,Math.PI*1.5,0,Math.PI*0.72),hairM);
-  hair.position.y=1.72;hair.castShadow=true;person3.add(hair);
-  /* 眼睛(暗示面部朝向) */
-  const eyeM=new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:.3});
-  [1,-1].forEach(sd=>{
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.026,12,10),eyeM);
-    eye.position.set(sd*.078,1.745,.205);person3.add(eye);
-  });
-  /* 嘴 */
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.055,.012,.01),
-    new THREE.MeshStandardMaterial({color:0x9a6a5e,roughness:.6}));
-  mouth.position.set(0,1.655,.222);person3.add(mouth);
-  /* 颈 */
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.13,14),skinM);
-  neck.position.y=1.56;person3.add(neck);
-  /* 躯干 */
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.245,.62,12,24),clothM);
-  torso.position.y=1.14;torso.castShadow=true;person3.add(torso);
-  /* 手臂 */
-  [1,-1].forEach(sd=>{
-    const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.062,.54,8,16),clothM);
-    arm.position.set(sd*.315,1.14,0);arm.rotation.z=sd*.12;arm.castShadow=true;person3.add(arm);
-  });
-  /* 腿 */
-  [1,-1].forEach(sd=>{
-    const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.088,.7,8,16),clothM);
-    leg.position.set(sd*.115,.44,0);leg.castShadow=true;person3.add(leg);
-  });
-  /* 鞋 */
-  [1,-1].forEach(sd=>{
-    const sh=new THREE.Mesh(new THREE.BoxGeometry(.15,.09,.3),shoeM);
-    sh.position.set(sd*.115,.045,.03);sh.castShadow=true;person3.add(sh);
-  });
-  /* 服装轮廓(裙摆/外套, 增强人形辨识) */
-  const skirt=new THREE.Mesh(new THREE.CylinderGeometry(.26,.44,.62,20,1,true),clothM);
-  skirt.position.y=.72;skirt.castShadow=true;person3.add(skirt);
-  /* 腰带 */
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.252,.022,8,24),
-    new THREE.MeshStandardMaterial({color:0x6a5230,roughness:.45,metalness:.35}));
-  belt.rotation.x=Math.PI/2;belt.position.y=.85;person3.add(belt);
-  person3.userData={clothM,hairM,skinM,skirt};
-  person3.position.set(0,0,-0.2);
-  person3.scale.setScalar(1.22);
-  scene3.add(person3);
-  personParts={head,hair,torso};
-
-  /* ── 氛围粒子(花瓣/尘埃/光斑) ── */
-  const pCount=110, pGeo=new THREE.BufferGeometry();
-  const pPos=new Float32Array(pCount*3);
-  for(let i=0;i<pCount;i++){
-    pPos[i*3]=(Math.random()-0.5)*9;
-    pPos[i*3+1]=Math.random()*4.4+0.2;
-    pPos[i*3+2]=(Math.random()-0.5)*11-1;
-  }
-  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-  const pMat=new THREE.PointsMaterial({color:0xf0d8b8,size:0.075,transparent:true,opacity:.75,
-    sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending});
-  const particles=new THREE.Points(pGeo,pMat);
-  scene3.add(particles);
-  window.__particles={mesh:particles,mat:pMat,geo:pGeo,base:pPos.slice(0)};
-
-  /* ── 窗光斑(地面投影, 强化氛围) ── */
-  const beam=new THREE.Mesh(new THREE.PlaneGeometry(2.6,7),
-    new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.10,
-      blending:THREE.AdditiveBlending,depthWrite:false}));
-  beam.rotation.x=-Math.PI/2;beam.rotation.z=-0.35;beam.position.set(-2.6,.03,-2.5);
-  scene3.add(beam);
-  window.__beam=beam;
-
-  ready3=true;
-  addEventListener('resize',()=>{
-    if(!ready3)return;
-    ren3.setSize(W(),H());cam3.aspect=W()/H();cam3.updateProjectionMatrix();
-  });
-  animate3D();
-  update3D();
+  if(studio3d)return;
+  try{
+    studio3d=createStudio($('viewWrap'));
+    studio3d.setAutoRotate(true);
+    addEventListener('resize',()=>studio3d&&studio3d.resize());
+    update3D();
+  }catch(e){console.error('3D init failed',e);$('vHud').innerHTML='3D 初始化失败<small>'+e.message+'</small>'}
 }
 
-/* ── 依据选择实时更新场景 ── */
 function update3D(){
-  if(!ready3)return;
+  if(!studio3d)return;
   const B=S.blocks;
-  const txt=arr=>arr.filter(Boolean).join(' ');
-  /* 主体文本(含案例载入内容)也参与分析 → 案例与3D是同一套 */
-  const subjTxt=(B.subject.text||'');
-  const peopleWord=/woman|women|girl|man|men|boy|person|people|portrait|couple|model|female|male|figure|character|human|child|kid|人物|女|男|少女|人像|情侣|模特|肖像|face|she |he /i.test(subjTxt);
-  const charOn=B.character.enabled||peopleWord;   /* 案例含人物词时自动显示人形 */
-  person3.visible=charOn;
-  if(charOn&&!B.character.enabled)setTimeout(()=>{const sw=document.querySelector('#paneOpt .sw input');
-    if(sw&&!sw.checked){sw.checked=true;S.blocks.character.enabled=true;}},0);
+  const j=arr=>arr.filter(Boolean).join(' ');
 
-  const styleTxt=txt([
-    ...B.style.items.map(i=>i.zh), B.style.text, subjTxt, B.composition.text,
-    ...Object.values(B.character.groups||{}).map(g=>g.zh),
-    ...(B.character.items||[]).map(i=>i.zh)
-  ]);
-  const lightTxt=txt([...(B.lighting.items||[]).map(i=>i.zh), B.lighting.text])+' '+styleTxt+' '+subjTxt;
-  const gradTxt=txt([...(B.grading.items||[]).map(i=>i.zh||i.prompt), ...(B.color.items||[]).map(i=>i.zh), B.color.text, B.grading.text])+' '+subjTxt;
-  const gearTxt=txt([...(B.gear.items||[]).map(i=>i.zh+' '+(i.prompt||'')), B.gear.text, ...(B.exposure.items||[]).map(i=>i.zh+' '+(i.prompt||'')), B.exposure.text])+' '+subjTxt;
+  /* 主体文本(含案例内容)参与分析 → 案例与3D是同一套 */
+  const subjTxt=B.subject.text||'';
+  const peopleWord=/woman|women|girl|man|men|boy|person|people|portrait|couple|model|female|male|figure|character|human|child|人物|女|男|少女|人像|情侣|模特|肖像/i.test(subjTxt);
+  const charOn=B.character.enabled||peopleWord;
+  if(charOn&&!B.character.enabled){const sw=document.querySelector('#paneOpt .sw input');
+    if(sw&&!sw.checked){sw.checked=true;S.blocks.character.enabled=true;}}
 
-  /* 服装颜色 */
-  const cm=person3.userData.clothM;
-  if(/纯欲|白|婚纱|清爽|居服|棉麻|white|cream|linen/.test(styleTxt))cm.color.setHex(0xf0e9dd);
-  else if(/黑|暗黑|皮|机能|酷|black|dark|leather|goth/.test(styleTxt))cm.color.setHex(0x2b2b36);
-  else if(/红|港风|复古|晚礼|red|crimson|vintage/.test(styleTxt))cm.color.setHex(0x8a3636);
-  else if(/蓝|牛仔|户外|通勤|blue|denim|navy/.test(styleTxt))cm.color.setHex(0x39557f);
-  else if(/绿|森系|汉服|中式|green|forest|kimono/.test(styleTxt))cm.color.setHex(0x46654c);
-  else if(/金|名媛|Old Money|轻奢|gold|luxury|elegant/.test(styleTxt))cm.color.setHex(0xb4904e);
-  else if(/粉|甜|少女|Y2K|pink|pastel|blossom|romantic/.test(styleTxt))cm.color.setHex(0xd9a3b0);
-  else if(/紫|梦幻|purple|dreamy/.test(styleTxt))cm.color.setHex(0x6f5fa8);
-  else cm.color.setHex(0xcfc6b6);
-  if(person3.userData.skirt)person3.userData.skirt.material=cm;
-  /* 发色 */
-  const hm=person3.userData.hairM;
-  if(/银白|白发/.test(styleTxt))hm.color.setHex(0xd8d4cc);
-  else if(/金发|染/.test(styleTxt))hm.color.setHex(0xb08a4e);
-  else if(/棕|茶/.test(styleTxt))hm.color.setHex(0x4a3524);
-  else hm.color.setHex(0x241e1a);
+  const styleTxt=j([...B.style.items.map(i=>i.zh),B.style.text,subjTxt,B.composition.text,
+    ...Object.values(B.character.groups||{}).map(g=>g.zh),...(B.character.items||[]).map(i=>i.zh)]);
+  const lightTxt=j([...(B.lighting.items||[]).map(i=>i.zh),B.lighting.text,styleTxt,subjTxt]);
+  const gradTxt=j([...(B.grading.items||[]).map(i=>i.zh+' '+(i.prompt||'')),...(B.color.items||[]).map(i=>i.zh),B.color.text,B.grading.text,subjTxt]);
+  const gearTxt=j([...(B.gear.items||[]).map(i=>i.zh+' '+(i.prompt||'')),B.gear.text,
+    ...(B.exposure.items||[]).map(i=>i.zh+' '+(i.prompt||'')),B.exposure.text,subjTxt]);
 
-  /* 光线: 6 种氛围明显区分 */
-  let bg=0x0a0a12, fogD=0.022;
-  if(/黄金|日落|傍晚|夕阳|golden hour|sunset|sunrise|warm sunlight|golden light/i.test(lightTxt)){
-    keyL.color.setHex(0xffa848);keyL.intensity=3.4;keyL.position.set(-5,4.2,4);
-    ambL.color.setHex(0x6b5a4a);ambL.intensity=1.5;rimL.intensity=1.2;rimL.color.setHex(0xffc98a);
-    winLight.material.color.setHex(0xffb055);bg=0x1c1408;fogD=0.026;
-  } else if(/蓝调|冷|阴|雾|忧郁|blue hour|overcast|moody|cold light|melanchol/i.test(lightTxt)){
-    keyL.color.setHex(0x9dc0ff);keyL.intensity=1.9;keyL.position.set(3,6,3);
-    ambL.color.setHex(0x4a5570);ambL.intensity=2.4;rimL.intensity=1.4;rimL.color.setHex(0x7ba8ff);
-    winLight.material.color.setHex(0xa8c8ff);bg=0x0c1220;fogD=0.03;
-  } else if(/霓虹|赛博|夜|霓|neon|cyberpunk|night|club|synth/i.test(lightTxt)){
-    keyL.color.setHex(0xff56a8);keyL.intensity=2.8;
-    ambL.color.setHex(0x3a2a55);ambL.intensity=1.2;rimL.intensity=2.6;rimL.color.setHex(0x36d8ff);
-    winLight.material.color.setHex(0xff56c8);bg=0x140a1c;fogD=0.028;
-  } else if(/烛|暖|室内|窗光|柔|candle|indoor|window light|soft light|diffused|cozy/i.test(lightTxt)){
-    keyL.color.setHex(0xffcf96);keyL.intensity=2.4;keyL.position.set(-4,5,4);
-    ambL.color.setHex(0x6a5a48);ambL.intensity=1.9;rimL.intensity=1.0;rimL.color.setHex(0xffd9b0);
-    winLight.material.color.setHex(0xffdca8);bg=0x18120c;fogD=0.024;
-  } else if(/低调|暗|戏剧|伦勃朗|硬|low key|dramatic|chiaroscuro|hard light|rembrandt|noir/i.test(lightTxt)){
-    keyL.color.setHex(0xffd9a0);keyL.intensity=3.8;keyL.position.set(-3.5,6,2.5);
-    ambL.color.setHex(0x2a2a38);ambL.intensity=0.5;rimL.intensity=1.6;rimL.color.setHex(0x9a8cff);
-    winLight.material.opacity=.5;bg=0x06060a;fogD=0.026;
-  } else if(/高调|明亮|清透|散射|high key|bright|airy|clean|white background/i.test(lightTxt)){
-    keyL.color.setHex(0xfff4e2);keyL.intensity=2.2;keyL.position.set(3,7,4);
-    ambL.color.setHex(0x8890a8);ambL.intensity=3.2;rimL.intensity=1.1;
-    winLight.material.color.setHex(0xfff2dd);bg=0x1a1c26;fogD=0.02;
-  } else {
-    keyL.color.setHex(0xffe0b8);keyL.intensity=2.6;keyL.position.set(4.5,7.5,5);
-    ambL.color.setHex(0x6a6a90);ambL.intensity=1.5;rimL.color.setHex(0x8b7cf6);rimL.intensity=1.8;
-    winLight.material.color.setHex(0xffd9a0);winLight.material.opacity=.95;bg=0x0a0a12;fogD=0.022;
-  }
-  /* 色调背景叠加 */
-  if(/青橙|电影|teal and orange|cinematic/i.test(gradTxt))bg=0x081018;
-  else if(/日系|清新|粉|pastel|japanese|soft pink/i.test(gradTxt))bg=0x201a24;
-  else if(/暗黑|黑|灰|monochrome|black and white|noir|dark/i.test(gradTxt))bg=0x07070b;
-  else if(/赛博|霓虹|cyberpunk|neon/i.test(gradTxt))bg=0x160a20;
-  else if(/暖|金|大地|warm|golden|earth|sepia/i.test(gradTxt))bg=0x1a1409;
-  else if(/蓝|冷|blue|cool/.test(gradTxt))bg=0x0c1220;
-  scene3.background.setHex(bg);scene3.fog.color.setHex(bg);scene3.fog.density=fogD;
-  /* 灯带颜色跟随光线设定 */
-  const strips=window.__glowStrips||[],pools=window.__glowPools||[];
-  let glowCol=keyL.color.getHex();
-  if(/霓虹|赛博/.test(lightTxt)){glowCol=0xff3fa0;
-    if(strips[1])strips[1].material.color.setHex(0x36d8ff);}
-  else if(/黄金|日落/.test(lightTxt))glowCol=0xffb055;
-  else if(/蓝调|冷/.test(lightTxt))glowCol=0x8fb8ff;
-  strips.forEach((st,i)=>{ if(i!==1||!/霓虹|赛博/.test(lightTxt)) st.material.color.setHex(glowCol); });
-  pools.forEach(p=>p.material.color.setHex(glowCol));
-  /* 氛围粒子: 樱花粉/雪花/尘埃/霓虹光点 */
-  const pt=window.__particles, beam=window.__beam;
-  if(pt){
-    let pc=0xf0d8b8, ps=0.075, op=.75;
-    if(/樱花|花瓣|cherry|blossom|petal|春|spring/i.test(subjTxt+lightTxt)){pc=0xffc0d0;ps=0.09;op=.9}
-    else if(/雪|snow|winter/i.test(subjTxt+lightTxt)){pc=0xffffff;ps=0.07;op=.9}
-    else if(/雨|rain/i.test(subjTxt+lightTxt)){pc=0xaac8e0;ps=0.05;op=.6}
-    else if(/霓虹|neon|cyber|夜|night/i.test(subjTxt+lightTxt)){pc=0xff56c8;ps=0.06;op=.85}
-    else if(/尘|dust|光斑|sunbeam|bokeh/i.test(subjTxt+lightTxt)){pc=0xfff0d0;ps=0.06;op=.7}
-    pt.mat.color.setHex(pc);pt.mat.size=ps;pt.mat.opacity=op;
-  }
-  if(beam){
-    let bc=glowCol, bop=.10;
-    if(/樱花|春|spring|blossom/i.test(subjTxt)){bc=0xffd0d8;bop=.16}
-    else if(/霓虹|neon/i.test(subjTxt+lightTxt)){bc=0xff56c8;bop=.14}
-    else if(/冷|blue|blue hour/i.test(lightTxt)){bc=0xa8c8ff;bop=.12}
-    beam.material.color.setHex(bc);beam.material.opacity=bop;
-  }
-  backWall.material.color.setHex(bg).offsetHSL(0,0,0.04);
-
-  /* 景深: 依据光圈(器材/曝光选择) */
-  const mA=gearTxt.match(/f\/([\d.]+)/);
-  const ap=mA?parseFloat(mA[1]):2.8;
-  const dofHalf=ap<=0.95?0.7:ap<=1.4?1.2:ap<=2?2.0:ap<=2.8?3.0:ap<=5.6?6:14;
-  furnishingsDepth(dofHalf);
-  /* 焦距透视(强化: 全范围 14-200mm) */
+  /* 人物 */
+  const col=guessColors(styleTxt);
+  studio3d.setPerson(charOn,col);
+  /* 光线 / 色调 / 氛围 */
+  const lightName=studio3d.setLighting(lightTxt);
+  studio3d.setTone(gradTxt);
+  studio3d.setAtmosphere(subjTxt+' '+lightTxt+' '+gradTxt);
+  /* 镜头(焦距/光圈) */
   const mF=gearTxt.match(/(\d{2,3})\s*mm/i);
-  const fl=mF?Math.max(14,Math.min(200,parseInt(mF[1]))):50;
-  cam3.fov=2*Math.atan(36/(2*fl))*180/Math.PI;
-  cam3.updateProjectionMatrix();
-  window.__lensFocal=fl;
-  window.__lensAperture=ap;
+  const fl=mF?parseInt(mF[1]):50;
+  const mA=gearTxt.match(/f\s*\/\s*([\d.]+)/i);
+  const ap=mA?parseFloat(mA[1]):2.8;
+  studio3d.setLens(fl,ap);
 
-  /* HUD */
-  const lightName=(/黄金|golden|sunset|warm sun/i.test(lightTxt)?'黄金时刻':/蓝调|blue hour|overcast|cold/i.test(lightTxt)?'冷调':/霓虹|neon|cyber/i.test(lightTxt)?'霓虹':/烛|暖光|candle|cozy/i.test(lightTxt)?'暖光':/低调|low key|dramatic/i.test(lightTxt)?'低调光':/高调|high key|bright/i.test(lightTxt)?'高调光':'自然光');
-  $('vHud').innerHTML=`${charOn?'👤 人物':'◎ 无人物'} · ${lightName}<small>${fl}mm f/${ap}${/青橙|日系|暗黑|赛博|暖/.test(gradTxt)?' · '+gradTxt.slice(0,14):''}</small>`;
+  $('vHud').innerHTML=`${charOn?'👤 人物':'◎ 无人物'} · ${lightName}<small>${fl}mm f/${ap}</small>`;
 }
 
-function furnishingsDepth(dofHalf){
-  const focus=-2.0;
-  const all=[...furn3,...pillars3];
-  all.forEach(o=>{
-    const d=Math.abs(o.position.z-focus);
-    const k=Math.min(1,Math.max(0,(d-dofHalf)/Math.max(dofHalf,0.4)));
-    if(!o.material)return;
-    const vis=1-k*0.72;                      /* 更明显虚化 */
-    o.material.transparent=k>0.02;
-    o.material.opacity=Math.max(0.25,vis);
-    const sc=1+k*0.5;                        /* 散景扩散 */
-    if(!o.userData._baseScale)o.userData._baseScale=o.scale.x;
-    o.scale.setScalar(o.userData._baseScale*sc);
-  });
-}
-
-let oy=0;
-function animate3D(){
-  if(!ready3)return;requestAnimationFrame(animate3D);
-  oy+=0.0014;
-  const swing=Math.sin(oy)*0.55;
-  /* 粒子缓慢飘动 */
-  const pt=window.__particles;
-  if(pt&&pt.geo){
-    const arr=pt.geo.attributes.position.array;
-    for(let i=0;i<arr.length;i+=3){
-      arr[i+1]-=0.0035;                       /* 下落 */
-      arr[i]+=Math.sin(oy*2+i)*0.0012;        /* 飘摆 */
-      if(arr[i+1]<0){arr[i+1]=4.6;arr[i]=(Math.random()-0.5)*9;arr[i+2]=(Math.random()-0.5)*11-1}
-    }
-    pt.geo.attributes.position.needsUpdate=true;
-  }
-  const fl=window.__lensFocal||50;
-  const dist=3.9*Math.max(0.35,Math.min(4.0,fl/50));   /* 保持主体大小, 焦距越长站越远 */
-  cam3.position.set(Math.sin(swing)*dist*0.5+0.55,1.55,Math.cos(swing)*dist*0.92);
-  cam3.lookAt(0,1.2,-0.3);
-  ren3.render(scene3,cam3);
-}
-
-/* 暴露 3D 接口 */
 window.__init3D=init3D;
 window.__update3D=update3D;
-window.__sceneBg=eff=>{
-  if(!ready3)return;
-  const bg=eff==='light'?0x1c1c22:0x0a0a12;
-  scene3.background.setHex(bg);scene3.fog.color.setHex(bg);
-  floorMesh.material.color.setHex(eff==='light'?0x3a3630:0x2a2622);
-  backWall.material.color.setHex(eff==='light'?0x2e2e38:0x22222e);
-};
+window.__sceneBg=eff=>{ if(!studio3d)return; studio3d.setTone(eff==='light'?'高调 bright':'暗黑 noir'); };
 
 /* ═══════ 镜头参数互通 ═══════ */
 function applyLensFromStorage(){
