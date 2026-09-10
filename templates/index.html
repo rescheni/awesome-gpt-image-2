@@ -467,14 +467,24 @@ function renderPro(){
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;letter-spacing:1px">${g.name} <span style="opacity:.6">${g.desc||''}</span></div>
       <div class="chips" style="max-height:88px;overflow-y:auto">
-        ${g.items.map((it,i)=>`<span class="chip ${proSel[g.id]===i?'on':''}" title="${it.tag||''}" onclick="pickPro('${g.id}',${i})">${it.zh}</span>`).join('')}
+        ${g.items.map((it,i)=>`<span class="chip ${proSel[g.id]===i?'on':''}" title="${it.tag||''}" onclick="pickPro('${g.id}',${i},event)">${it.zh}</span>`).join('')}
       </div>
     </div>`).join('');
 }
-function pickPro(gid, idx){
-  proSel[gid]=(proSel[gid]===idx)?undefined:idx;
-  if(proSel[gid]===undefined)delete proSel[gid];
-  renderPro();updateProSummary();
+function pickPro(gid, idx, ev){
+  const wasSel = proSel[gid]===idx;
+  if(wasSel) delete proSel[gid];
+  else proSel[gid]=idx;
+  // 只更新同类内的 chip，避免整面板重绘(丢失滚动位置)
+  const wrap = ev && ev.target ? ev.target.closest('.chips') : null;
+  if(wrap){
+    wrap.querySelectorAll('.chip').forEach((c,i)=>{
+      c.classList.toggle('on', proSel[gid]===i);
+    });
+  } else {
+    renderPro();
+  }
+  updateProSummary();
 }
 function collectProParams(){
   const out={};
