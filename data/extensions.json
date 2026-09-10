@@ -1,0 +1,329 @@
+{
+  "version": "1.0",
+  "description": "扩展参数库 — 主体场景 / 人物效果大全 / 相机详细参数",
+  "subjects": {
+    "name": "主体场景",
+    "desc": "点选即填充，也可自由输入",
+    "groups": [
+      {
+        "id": "subject_portrait",
+        "name": "人像",
+        "items": [
+          {"zh": "都市女性人像", "prompt": "a stylish urban woman, city street background"},
+          {"zh": "商务男性人像", "prompt": "a professional businessman in tailored suit, corporate setting"},
+          {"zh": "少女写真", "prompt": "a young girl in soft light, delicate portrait"},
+          {"zh": "老年人物特写", "prompt": "an elderly person with weathered face, life-worn character portrait"},
+          {"zh": "儿童抓拍", "prompt": "a child caught mid-laugh, candid childhood moment"},
+          {"zh": "情侣合照", "prompt": "an intimate couple, natural affectionate pose"},
+          {"zh": "街头路人剪影", "prompt": "an anonymous passerby silhouette against bright backlight"},
+          {"zh": "舞者动态", "prompt": "a dancer frozen mid-movement, elegant motion"},
+          {"zh": "运动人物", "prompt": "an athlete in action, sweat and effort visible"},
+          {"zh": "复古港风女主", "prompt": "a retro Hong Kong style woman, 90s aesthetic"}
+        ]
+      },
+      {
+        "id": "subject_product",
+        "name": "产品",
+        "items": [
+          {"zh": "护肤品化妆品", "prompt": "cosmetic products, premium skincare bottles, clean beauty shot"},
+          {"zh": "腕表珠宝", "prompt": "a luxury watch / fine jewelry on reflective surface, macro detail"},
+          {"zh": "数码产品", "prompt": "a tech gadget floating, minimal studio product shot"},
+          {"zh": "酒水饮品", "prompt": "a beverage bottle with condensation, splash and ice"},
+          {"zh": "鞋履服饰", "prompt": "fashion footwear / apparel, editorial product styling"},
+          {"zh": "美食摆盘", "prompt": "gourmet food plating, appetizing close-up"},
+          {"zh": "咖啡茶饮", "prompt": "a crafted coffee cup with latte art, cafe ambience"},
+          {"zh": "香水", "prompt": "an elegant perfume bottle, glass refraction and light play"},
+          {"zh": "运动装备", "prompt": "sports gear, dynamic energy, performance aesthetic"},
+          {"zh": "家居用品", "prompt": "lifestyle homeware, warm interior staging"}
+        ]
+      },
+      {
+        "id": "subject_scene",
+        "name": "场景环境",
+        "items": [
+          {"zh": "自然风光", "prompt": "breathtaking natural landscape, mountains and mist"},
+          {"zh": "城市夜景", "prompt": "city skyline at night, glowing windows and traffic trails"},
+          {"zh": "海边日落", "prompt": "a coastal sunset, waves catching golden light"},
+          {"zh": "森林秘境", "prompt": "a dense forest with light shafts through canopy"},
+          {"zh": "沙漠荒野", "prompt": "vast desert dunes with rippled sand texture"},
+          {"zh": "雪山冰川", "prompt": "snow-covered peaks and glacial ice, cold blue tones"},
+          {"zh": "古镇街道", "prompt": "an ancient town alley, weathered walls and stone path"},
+          {"zh": "现代建筑", "prompt": "modern architecture, geometric concrete and glass"},
+          {"zh": "室内空间", "prompt": "an interior space with considered furniture and light"},
+          {"zh": "雨夜街巷", "prompt": "a rainy night alley, wet asphalt reflecting neon"}
+        ]
+      },
+      {
+        "id": "subject_other",
+        "name": "其他主体",
+        "items": [
+          {"zh": "动物特写", "prompt": "an animal close-up, fur and eye detail"},
+          {"zh": "花卉植物", "prompt": "botanical subject, petals and leaf texture"},
+          {"zh": "抽象几何", "prompt": "abstract geometric forms, color and shape study"},
+          {"zh": "交通工具", "prompt": "a vehicle in motion, speed and chrome reflections"},
+          {"zh": "科幻机甲", "prompt": "a sci-fi mech, industrial detail and panel lines"},
+          {"zh": "幻想生物", "prompt": "a fantasy creature, mythic and otherworldly"},
+          {"zh": "静物组合", "prompt": "a still life arrangement, careful object placement"},
+          {"zh": "文字排版主体", "prompt": "typography-driven visual, letterform as hero"},
+          {"zh": "微距细节", "prompt": "extreme macro of texture, unseen micro detail"},
+          {"zh": "极简单物件", "prompt": "a single object in vast negative space, minimal"}
+        ]
+      }
+    ]
+  },
+  "characters": {
+    "name": "人物效果大全",
+    "desc": "先选择「是否有人物」，再点选各项人物特征",
+    "groups": [
+      {
+        "id": "char_identity",
+        "name": "人物设定",
+        "items": [
+          {"zh": "东亚女性", "prompt": "an East Asian woman"},
+          {"zh": "东亚男性", "prompt": "an East Asian man"},
+          {"zh": "欧美女性", "prompt": "a Caucasian woman"},
+          {"zh": "欧美男性", "prompt": "a Caucasian man"},
+          {"zh": "混血面孔", "prompt": "a mixed-race person, ambiguous heritage features"},
+          {"zh": "中年女性", "prompt": "a woman in her forties, mature beauty"},
+          {"zh": "中年男性", "prompt": "a man in his forties, distinguished features"},
+          {"zh": "老年女性", "prompt": "an elderly woman, silver hair, dignified"},
+          {"zh": "老年男性", "prompt": "an elderly man, grey beard, weathered dignity"},
+          {"zh": "少女", "prompt": "a teenage girl, youthful freshness"},
+          {"zh": "少年", "prompt": "a teenage boy, adolescent energy"},
+          {"zh": "儿童", "prompt": "a small child, innocent expression"}
+        ]
+      },
+      {
+        "id": "char_expression",
+        "name": "表情情绪",
+        "items": [
+          {"zh": "冷淡放空", "prompt": "vacant cool expression, emotionally distant"},
+          {"zh": "浅浅微笑", "prompt": "a faint knowing smile"},
+          {"zh": "开怀大笑", "prompt": "genuine open laughter, joyful"},
+          {"zh": "闭眼感受风", "prompt": "eyes closed feeling the breeze, serene"},
+          {"zh": "若有所思", "prompt": "lost in thought, contemplative gaze"},
+          {"zh": "回眸一瞥", "prompt": "glancing back over the shoulder"},
+          {"zh": "欲言又止", "prompt": "about to speak but hesitating"},
+          {"zh": "忍俊不禁", "prompt": "trying not to laugh, suppressed smile"},
+          {"zh": "轻微皱眉", "prompt": "slight frown, subtle tension"},
+          {"zh": "眼神迷离", "prompt": "dreamy unfocused gaze"},
+          {"zh": "倔强眼神", "prompt": "defiant determined stare"},
+          {"zh": "温柔注视", "prompt": "tender gentle gaze"},
+          {"zh": "厌倦", "prompt": "bored weary expression"},
+          {"zh": "惊讶", "prompt": "surprised widened eyes"},
+          {"zh": "调皮眨眼", "prompt": "playful wink"},
+          {"zh": "淡然疏离", "prompt": "aloof indifferent composure"}
+        ]
+      },
+      {
+        "id": "char_pose",
+        "name": "姿态动作",
+        "items": [
+          {"zh": "正面站立", "prompt": "standing straight facing the camera"},
+          {"zh": "侧身回望", "prompt": "turned in profile, looking back"},
+          {"zh": "行走途中", "prompt": "walking mid-stride, natural gait"},
+          {"zh": "倚墙而立", "prompt": "leaning against a wall casually"},
+          {"zh": "坐姿放松", "prompt": "seated in a relaxed pose"},
+          {"zh": "蹲坐", "prompt": "crouching low, compact posture"},
+          {"zh": "手扶帽檐", "prompt": "hand touching the brim of a hat"},
+          {"zh": "整理头发", "prompt": "hand adjusting hair"},
+          {"zh": "低头看物", "prompt": "looking down at something in hands"},
+          {"zh": "抬手遮阳", "prompt": "hand raised shielding eyes from sun"},
+          {"zh": "刚起身", "prompt": "caught just as they rise to stand"},
+          {"zh": "刚回头", "prompt": "captured the instant of turning around"},
+          {"zh": "伸懒腰", "prompt": "stretching lazily"},
+          {"zh": "抱臂站立", "prompt": "standing with arms crossed"},
+          {"zh": "手插口袋", "prompt": "hands in pockets, casual stance"},
+          {"zh": "跳跃瞬间", "prompt": "frozen mid-jump, airborne"},
+          {"zh": "奔跑动感", "prompt": "running with dynamic motion"},
+          {"zh": "躺卧", "prompt": "reclining, lying down"},
+          {"zh": "背影走远", "prompt": "seen from behind, walking away"},
+          {"zh": "半身入镜", "prompt": "only partially entering the frame"}
+        ]
+      },
+      {
+        "id": "char_outfit",
+        "name": "服装风格",
+        "items": [
+          {"zh": "纯欲风", "prompt": "pure yet alluring style, soft sensuality"},
+          {"zh": "BM风", "prompt": "Brandy Melville cropped casual style"},
+          {"zh": "Old Money", "prompt": "old money quiet luxury tailoring"},
+          {"zh": "法式慵懒", "prompt": "French effortless chic, undone elegance"},
+          {"zh": "韩系轻熟", "prompt": "Korean light mature style, refined casual"},
+          {"zh": "极简冷淡", "prompt": "minimal cool aesthetic, monochrome clean lines"},
+          {"zh": "知识分子风", "prompt": "intellectual style, tweed and glasses academic"},
+          {"zh": "Y2K", "prompt": "Y2K revival, metallic and low-rise nostalgia"},
+          {"zh": "甜酷风", "prompt": "sweet-tough mix, girly meets edgy"},
+          {"zh": "都市通勤", "prompt": "urban commuting, sharp workwear"},
+          {"zh": "度假风", "prompt": "vacation resort wear, breezy fabrics"},
+          {"zh": "白开水高级感", "prompt": "quiet luxury neutral palette, understated"},
+          {"zh": "新中式", "prompt": "modern Chinese style, reinterpreted tradition"},
+          {"zh": "机能户外", "prompt": "technical outdoor gear, functional utility"},
+          {"zh": "复古港风", "prompt": "retro Hong Kong 90s styling"},
+          {"zh": "街头潮牌", "prompt": "streetwear hype brands, bold graphics"},
+          {"zh": "晚礼服", "prompt": "formal evening gown / tuxedo elegance"},
+          {"zh": "居家松弛", "prompt": "relaxed loungewear, comfortable at home"},
+          {"zh": "西装正装", "prompt": "sharp tailored suit, professional"},
+          {"zh": "针织毛衣", "prompt": "soft knitwear, cozy texture"}
+        ]
+      },
+      {
+        "id": "char_hair",
+        "name": "发型发色",
+        "items": [
+          {"zh": "长直黑发", "prompt": "long straight black hair"},
+          {"zh": "微卷长发", "prompt": "long lightly wavy hair"},
+          {"zh": "短发干练", "prompt": "short crisp cropped hair"},
+          {"zh": "波波头", "prompt": "bob cut, chin-length"},
+          {"zh": "蓬松卷发", "prompt": "voluminous curly hair"},
+          {"zh": "高马尾", "prompt": "high ponytail"},
+          {"zh": "低盘发", "prompt": "low elegant updo"},
+          {"zh": "丸子头", "prompt": "messy bun"},
+          {"zh": "接发长辫", "prompt": "long braided hair"},
+          {"zh": "空气刘海", "prompt": "wispy see-through bangs"},
+          {"zh": "茶色挑染", "prompt": "ash-brown highlighted hair"},
+          {"zh": "银白发", "prompt": "silver white hair"},
+          {"zh": "被风吹乱", "prompt": "hair tousled by wind"},
+          {"zh": "湿润发丝", "prompt": "wet slicked-back hair"},
+          {"zh": "短发寸头", "prompt": "buzz cut"},
+          {"zh": "络腮胡", "prompt": "full beard, groomed"}
+        ]
+      },
+      {
+        "id": "char_look",
+        "name": "妆感肤质",
+        "items": [
+          {"zh": "裸妆清透", "prompt": "barely-there natural makeup, clear skin"},
+          {"zh": "水光妆", "prompt": "dewy glass skin, luminous finish"},
+          {"zh": "哑光妆面", "prompt": "matte finish makeup, velvet skin"},
+          {"zh": "烟熏妆", "prompt": "smoky eye makeup, dramatic shadows"},
+          {"zh": "正红唇", "prompt": "bold red lipstick"},
+          {"zh": "雀斑保留", "prompt": "visible freckles, unretouched"},
+          {"zh": "真实皮肤纹理", "prompt": "authentic skin texture, pores visible"},
+          {"zh": "汗珠光泽", "prompt": "sweat beads glistening on skin"},
+          {"zh": "高光立体", "prompt": "contoured highlighting, sculpted features"},
+          {"zh": "素颜感", "prompt": "no-makeup makeup look"},
+          {"zh": "复古红唇+细眉", "prompt": "vintage red lips with thin arched brows"},
+          {"zh": "日系透明感", "prompt": "Japanese translucent skin finish"}
+        ]
+      },
+      {
+        "id": "char_body",
+        "name": "体态特征",
+        "items": [
+          {"zh": "纤细修长", "prompt": "slender elongated figure"},
+          {"zh": "健康匀称", "prompt": "fit athletic proportions"},
+          {"zh": "高挑模特身材", "prompt": "tall model proportions"},
+          {"zh": "娇小玲珑", "prompt": "petite delicate frame"},
+          {"zh": "肌肉线条", "prompt": "defined muscle definition"},
+          {"zh": "柔和曲线", "prompt": "soft natural curves"},
+          {"zh": "肩颈线条", "prompt": "elegant neck and shoulder line"},
+          {"zh": "手部特写", "prompt": "expressive hands, elegant fingers"},
+          {"zh": "背影轮廓", "prompt": "silhouetted back outline"},
+          {"zh": "侧脸轮廓", "prompt": "sharp profile silhouette"}
+        ]
+      },
+      {
+        "id": "char_interact",
+        "name": "镜头互动",
+        "items": [
+          {"zh": "直视镜头", "prompt": "looking directly into the lens"},
+          {"zh": "完全无视镜头", "prompt": "unaware of the camera, candid"},
+          {"zh": "眼神掠过镜头", "prompt": "gaze passing just beside the lens"},
+          {"zh": "透过镜子看我", "prompt": "looking at camera through a mirror"},
+          {"zh": "被闪光灯惊到", "prompt": "startled by the flash"},
+          {"zh": "与镜头互动微笑", "prompt": "playfully engaging with the camera"},
+          {"zh": "背对镜头", "prompt": "turned fully away from camera"},
+          {"zh": "只露半张脸", "prompt": "only half the face visible in frame"}
+        ]
+      }
+    ]
+  },
+  "camera_details": {
+    "name": "相机详细参数",
+    "desc": "快门 / 感光度 / 白平衡 / 画幅 / 对焦",
+    "groups": [
+      {
+        "id": "cd_shutter",
+        "name": "快门速度",
+        "items": [
+          {"zh": "1/8000s 冻结瞬间", "prompt": "1/8000s shutter speed, frozen peak action"},
+          {"zh": "1/2000s 高速凝固", "prompt": "1/2000s, crisp motion freeze"},
+          {"zh": "1/500s 运动抓拍", "prompt": "1/500s, sports action freeze"},
+          {"zh": "1/250s 常规手持", "prompt": "1/250s, standard handheld sharpness"},
+          {"zh": "1/125s 轻微动感", "prompt": "1/125s, slight motion presence"},
+          {"zh": "1/60s 手持慢速", "prompt": "1/60s, subtle motion blur, handheld feel"},
+          {"zh": "1/30s 动态模糊", "prompt": "1/30s, visible motion blur"},
+          {"zh": "1/8s 拖影", "prompt": "1/8s, streaking motion trails"},
+          {"zh": "1s 长曝光", "prompt": "1 second exposure, smooth motion trails"},
+          {"zh": "10s 超长曝", "prompt": "10 second long exposure, silky water and light trails"},
+          {"zh": "30s+ 星轨", "prompt": "30+ second exposure, star trails and stillness"},
+          {"zh": "B门光绘", "prompt": "bulb mode light painting, drawn light streaks"}
+        ]
+      },
+      {
+        "id": "cd_iso",
+        "name": "感光度",
+        "items": [
+          {"zh": "ISO 64 极致纯净", "prompt": "ISO 64, ultimate clean detail, zero noise"},
+          {"zh": "ISO 100 棚拍纯净", "prompt": "ISO 100, studio clean base ISO"},
+          {"zh": "ISO 200 日光", "prompt": "ISO 200, daylight clarity"},
+          {"zh": "ISO 400 通用", "prompt": "ISO 400, versatile sensitivity"},
+          {"zh": "ISO 800 弱光", "prompt": "ISO 800, low light with mild grain"},
+          {"zh": "ISO 1600 室内", "prompt": "ISO 1600, indoor available light, visible grain"},
+          {"zh": "ISO 3200 夜拍", "prompt": "ISO 3200, night street, pronounced grain"},
+          {"zh": "ISO 6400 高感", "prompt": "ISO 6400, heavy grain, moody low light"},
+          {"zh": "ISO 12800 极暗", "prompt": "ISO 12800, extreme low light, coarse noise texture"},
+          {"zh": "ISO 25600 接近全黑", "prompt": "ISO 25600, near-darkness, gritty noise aesthetic"}
+        ]
+      },
+      {
+        "id": "cd_wb",
+        "name": "白平衡",
+        "items": [
+          {"zh": "日光 5500K", "prompt": "daylight white balance 5500K, neutral"},
+          {"zh": "阴天 6500K", "prompt": "cloudy white balance 6500K, warm shift"},
+          {"zh": "阴影 7500K", "prompt": "shade white balance 7500K, very warm"},
+          {"zh": "钨丝灯 3200K", "prompt": "tungsten white balance 3200K, cool correction"},
+          {"zh": "荧光灯 4000K", "prompt": "fluorescent white balance 4000K, green cast"},
+          {"zh": "闪光灯 6000K", "prompt": "flash white balance 6000K, crisp color"},
+          {"zh": "偏暖调", "prompt": "warm white balance, golden tint throughout"},
+          {"zh": "偏冷调", "prompt": "cool white balance, blue tint throughout"},
+          {"zh": "手动偏绿", "prompt": "green-shifted white balance, cinematic cast"},
+          {"zh": "手动偏品红", "prompt": "magenta-shifted white balance, stylized"}
+        ]
+      },
+      {
+        "id": "cd_format",
+        "name": "画幅格式",
+        "items": [
+          {"zh": "中画幅 6×7", "prompt": "medium format 6x7 film, rich tonal depth"},
+          {"zh": "中画幅 6×6 方形", "prompt": "6x6 square medium format"},
+          {"zh": "大画幅 4×5", "prompt": "4x5 large format, perspective control detail"},
+          {"zh": "全画幅 35mm", "prompt": "35mm full frame, standard field of view"},
+          {"zh": "APS-C 半幅", "prompt": "APS-C crop sensor, extended reach"},
+          {"zh": "M4/3 微四三", "prompt": "Micro Four Thirds, deep depth of field"},
+          {"zh": "1英寸传感器", "prompt": "1-inch sensor compact camera look"},
+          {"zh": "宽银幕 2.39:1", "prompt": "2.39:1 widescreen anamorphic framing"},
+          {"zh": "手机竖屏 9:16", "prompt": "9:16 vertical smartphone framing"}
+        ]
+      },
+      {
+        "id": "cd_focus",
+        "name": "对焦与曝光",
+        "items": [
+          {"zh": "眼控对焦", "prompt": "eye-AF locked on pupil, razor sharp iris"},
+          {"zh": "单点精准对焦", "prompt": "single point AF on specific detail"},
+          {"zh": "连续追焦", "prompt": "continuous AF tracking subject motion"},
+          {"zh": "手动失焦", "prompt": "deliberately out of focus, soft abstraction"},
+          {"zh": "前景合焦背景虚", "prompt": "focused on foreground element, background blurred"},
+          {"zh": "包围曝光 HDR", "prompt": "exposure bracketing HDR composite, full detail range"},
+          {"zh": "宁欠勿过", "prompt": "exposed for highlights, protected shadows"},
+          {"zh": "过曝高调", "prompt": "intentionally overexposed, airy blown highlights"},
+          {"zh": "欠曝暗调", "prompt": "underexposed, deep moody shadows"},
+          {"zh": "点测光面部", "prompt": "spot metering on face, background falls dark"}
+        ]
+      }
+    ]
+  }
+}

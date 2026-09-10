@@ -2,12 +2,18 @@
 config.json
 custom_templates.json
 
-# Python
+# 依赖
+node_modules/
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 *.egg-info/
+
+# 仅保留 lens 页实际使用的 three 版本，其余静态文件不入库
+static/three.js
+static/three.min.js
+static/three.module.js
 
 # 系统/编辑器
 .DS_Store
@@ -17,6 +23,6 @@ Thumbs.db
 *.log
 *.swp
 
-# 临时文件
+# 临时
 /tmp/
 *.tmp

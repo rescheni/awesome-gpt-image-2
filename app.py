@@ -130,6 +130,31 @@ def photo_styles():
     with open(p) as f:
         return jsonify({"ok": True, "data": json.load(f)})
 
+@app.route("/api/extensions")
+def extensions():
+    """扩展库(主体场景/人物效果/相机详细参数) — 游客可看"""
+    p = os.path.join(BASE, "data", "extensions.json")
+    if not os.path.exists(p):
+        return jsonify({"ok": False, "msg": "扩展库缺失"}), 404
+    with open(p) as f:
+        return jsonify({"ok": True, "data": json.load(f)})
+
+@app.route("/api/all-params")
+def all_params():
+    """一次性返回全部参数库, 减少前端请求"""
+    out = {}
+    for key, fname in [("styles", "photo-styles.json"), ("ext", "extensions.json")]:
+        p = os.path.join(BASE, "data", fname)
+        if os.path.exists(p):
+            with open(p) as f:
+                out[key] = json.load(f)
+    return jsonify({"ok": True, "data": out})
+
+@app.route("/lens")
+def lens_page():
+    """Three.js 镜头效果预览页"""
+    return render_template("lens.html")
+
 @app.route("/api/cases")
 def cases():
     with open(CASES_PATH) as f:
@@ -264,15 +289,27 @@ def local_generate(req):
         if isinstance(v, str) and v.strip():
             tech_bits.append(v.strip())
 
+    # 相机详细参数(快门/ISO/白平衡/画幅/对焦)
+    cams = req.get("camera_details") or {}
+    cam_bits = [v.strip() for v in cams.values() if isinstance(v, str) and v.strip()]
+
+    # 人物效果(多选)
+    char_bits = [v.strip() for v in (req.get("character_params") or {}).values()
+                 if isinstance(v, str) and v.strip()]
+
     parts = []
     if info:
         parts.append(f"【模板】{info.get('name', tpl_ref)}")
     if subject:
         parts.append(f"主体与场景：{subject}")
+    if char_bits:
+        parts.append(f"人物特征：{', '.join(char_bits)}")
     if style:
         parts.append(f"视觉风格：{style}")
     if tech_bits:
-        parts.append(f"摄影参数：{', '.join(tech_bits)}")
+        parts.append(f"摄影器材：{', '.join(tech_bits)}")
+    if cam_bits:
+        parts.append(f"拍摄参数：{', '.join(cam_bits)}")
     if composition:
         parts.append(f"构图与布局：{composition}")
     elif info and info.get("guidance"):
@@ -326,9 +363,12 @@ def call_llm(req, llm_cfg):
 必须完整保留用户提供的相机/镜头/胶片/调色等摄影参数，并自然地融入提示词。
 避免：影楼感、塑料皮肤、AI假人感、五颜六色、杂乱拼贴、多余装饰。用中文输出。"""
     params = req.get("params") or {}
-    tech = "、".join([v for v in params.values() if isinstance(v, str) and v.strip()])
+    cams = req.get("camera_details") or {}
+    chars = req.get("character_params") or {}
+    tech = "、".join([v for v in list(params.values()) + list(cams.values()) + list(chars.values())
+                      if isinstance(v, str) and v.strip()])
     user_prompt = (f"模板: {tpl_name}\n主体: {req.get('subject','')}\n风格: {req.get('style','') or '自由'}"
-                   f"\n摄影参数: {tech or '无'}"
+                   f"\n摄影/人物参数: {tech or '无'}"
                    f"\n比例: {req.get('aspect','3:4')}\n画面文字: {req.get('text','') or '无'}\n生成完整提示词。")
     body = json.dumps({"model": model,
                        "messages": [{"role": "system", "content": sys_prompt},
