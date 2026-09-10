@@ -1,0 +1,22 @@
+# 本地配置与凭据（含密钥/账号，禁止上传）
+config.json
+custom_templates.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+*.swp
+
+# 临时文件
+/tmp/
+*.tmp

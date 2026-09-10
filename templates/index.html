@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Atelier · 图像提示词工作室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;500;700&family=Space+Grotesk:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --bg2:#101018; --card:rgba(255,255,255,.035); --card-border:rgba(255,255,255,.08);
+  --text:#e8e6e1; --text-dim:#8a8a93; --text-faint:#5a5a63;
+  --accent:#c9a96a; --accent2:#e8d5a8; --purple:#8b7cf6; --line:rgba(255,255,255,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(139,124,246,.08),transparent),
+  radial-gradient(ellipse 60% 40% at 90% 10%,rgba(201,169,106,.06),transparent)}
+::selection{background:rgba(201,169,106,.3)}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:90;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;height:60px;background:rgba(10,10,15,.75);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:11px;cursor:pointer}
+.logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 18px rgba(139,124,246,.3)}
+.logo-name{font-family:'Space Grotesk','Noto Sans SC';font-size:15px;letter-spacing:.5px}
+.logo-name em{font-style:normal;color:var(--accent)}
+.top-actions{display:flex;align-items:center;gap:8px}
+.btn{border:1px solid var(--card-border);background:var(--card);color:var(--text);padding:7px 16px;border-radius:9px;
+  font-size:12.5px;cursor:pointer;transition:all .2s;font-family:inherit;letter-spacing:.5px}
+.btn:hover{background:rgba(255,255,255,.08)}
+.btn-gold{background:linear-gradient(135deg,#d8b877,#b8934f);color:#14110a;border:none;font-weight:600;padding:8px 18px}
+.btn-gold:hover{transform:translateY(-1px)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text-faint)}
+.btn-ghost:hover{color:var(--text);background:transparent}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim)}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+
+.hero{padding:110px 30px 36px;text-align:center}
+.hero .kicker{font-size:11px;letter-spacing:6px;color:var(--text-faint);text-transform:uppercase;margin-bottom:16px}
+.hero h1{font-family:'Noto Serif SC';font-weight:300;font-size:clamp(30px,4.5vw,52px);letter-spacing:3px;line-height:1.35;margin-bottom:14px}
+.hero h1 .grad{background:linear-gradient(120deg,#e8d5a8,#c9a96a,#8b7cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text-dim);font-size:14px;max-width:520px;margin:0 auto;line-height:1.9;font-weight:300}
+
+.studio{max-width:1500px;margin:0 auto;padding:0 24px 60px}
+.shell{display:grid;grid-template-columns:270px 1fr;gap:0;background:var(--bg2);border:1px solid var(--card-border);
+  border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+@media(max-width:1100px){.shell{grid-template-columns:1fr}}
+
+/* 左栏 */
+.sidebar{border-right:1px solid var(--line);padding:18px;background:rgba(255,255,255,.012)}
+.side-title{font-size:11px;letter-spacing:3px;color:var(--text-faint);text-transform:uppercase;padding:4px 6px 12px;
+  display:flex;justify-content:space-between;align-items:center;font-family:'Space Grotesk'}
+.side-title .cnt{color:var(--text-faint);letter-spacing:0}
+.tpl-scroll{max-height:calc(100vh - 240px);overflow-y:auto;padding-right:3px}
+.tpl-scroll::-webkit-scrollbar{width:3px}
+.tpl-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+.tpl-group{font-size:10px;color:var(--text-faint);padding:14px 8px 5px;letter-spacing:2px;display:flex;align-items:center;gap:6px}
+.tpl-group::after{content:"";flex:1;height:1px;background:var(--line)}
+.tpl-item{padding:9px 10px;border-radius:9px;cursor:pointer;font-size:13px;transition:all .15s;border:1px solid transparent;
+  display:flex;align-items:center;justify-content:space-between;color:var(--text-dim)}
+.tpl-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.tpl-item.active{background:linear-gradient(135deg,rgba(201,169,106,.13),rgba(139,124,246,.07));
+  border-color:rgba(201,169,106,.28);color:var(--accent2)}
+.tpl-item .arrow{opacity:0;font-size:10px;color:var(--accent)}
+.tpl-item.active .arrow{opacity:1}
+.tpl-item .cb{font-size:9px;background:rgba(139,124,246,.25);color:#b3a8ff;padding:0 6px;border-radius:7px;margin-left:5px}
+.tpl-item .del{opacity:0;font-size:10px;color:#e06c6c;padding:0 4px}
+.tpl-item:hover .del{opacity:1}
+
+/* 主区 */
+.main{padding:22px 26px;min-width:0}
+.tpl-banner{background:linear-gradient(135deg,rgba(201,169,106,.07),rgba(139,124,246,.05));
+  border:1px solid rgba(201,169,106,.16);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:none}
+.tpl-banner.show{display:block;animation:fadeIn .4s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.tpl-banner .bn-title{font-family:'Noto Serif SC';font-size:18px;letter-spacing:1px;margin-bottom:4px}
+.tpl-banner .bn-when{font-size:12.5px;color:var(--text-dim);font-weight:300;line-height:1.8}
+
+.block{margin-bottom:14px}
+.block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.block-label{font-size:11px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.block-label i{font-style:normal;width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:.6}
+.block-label .hint{letter-spacing:0;text-transform:none;color:var(--text-faint);font-weight:300}
+.block-input{width:100%;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:11px;
+  padding:12px 15px;color:var(--text);font-size:13.5px;line-height:1.8;resize:vertical;outline:none;
+  font-family:inherit;transition:border-color .25s;font-weight:300}
+.block-input:focus{border-color:rgba(201,169,106,.45);background:rgba(255,255,255,.045)}
+.block-input::placeholder{color:var(--text-faint)}
+.block-input.area-min{min-height:52px}
+textarea.block-input.big{min-height:86px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:900px){.row2,.row3{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.chip{font-size:12px;padding:5px 13px;border-radius:100px;cursor:pointer;border:1px solid var(--line);
+  color:var(--text-faint);transition:all .18s;background:transparent}
+.chip:hover{color:var(--text);border-color:rgba(255,255,255,.22)}
+.chip.on{background:rgba(201,169,106,.14);border-color:rgba(201,169,106,.38);color:var(--accent2)}
+
+.actions-bar{display:flex;gap:10px;margin:18px 0}
+.btn-assemble{flex:1;padding:13px;border:none;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600;
+  letter-spacing:2px;font-family:inherit;transition:all .25s;
+  background:linear-gradient(135deg,#d8b877,#b8934f 55%,#8b7cf6 160%);color:#14110a;
+  box-shadow:0 6px 24px rgba(201,169,106,.18)}
+.btn-assemble:hover{transform:translateY(-1px);box-shadow:0 9px 34px rgba(201,169,106,.3)}
+.btn-ai{flex:1;padding:13px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600;letter-spacing:2px;
+  font-family:inherit;transition:all .25s;border:1px solid rgba(139,124,246,.4);background:rgba(139,124,246,.08);
+  color:#b3a8ff}
+.btn-ai:hover{background:rgba(139,124,246,.16)}
+.btn-ai:disabled{opacity:.5;cursor:not-allowed}
+
+.result-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.result-head .rt{font-size:11px;letter-spacing:2px;color:var(--text-faint);text-transform:uppercase;flex:1}
+.src-tag{font-size:11px;color:var(--accent);display:flex;align-items:center;gap:6px}
+.src-tag .d{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.src-tag.llm .d{background:#7bd88f;box-shadow:0 0 6px #7bd88f}
+.prompt-out{background:rgba(0,0,0,.32);border:1px solid var(--line);border-radius:13px;padding:18px 20px;
+  min-height:150px;white-space:pre-wrap;font-size:13.5px;line-height:2;color:#d8d4ca;font-weight:300;position:relative}
+.prompt-out .ph{color:var(--text-faint);text-align:center;display:flex;justify-content:center;align-items:center;height:100%;min-height:110px;font-size:13px}
+.llm-err{margin-top:8px;font-size:12px;color:#e0a060}
+.result-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+
+/* 登录 modal - 只在主动点击AI时出现 */
+.modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
+.modal.show{display:flex}
+.modal-card{width:380px;background:var(--bg2);border:1px solid var(--card-border);border-radius:18px;padding:30px}
+.modal-card h3{font-family:'Noto Serif SC';font-weight:500;font-size:18px;margin-bottom:6px;text-align:center}
+.modal-card .sub{font-size:12px;color:var(--text-faint);text-align:center;margin-bottom:18px}
+.modal-card input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;
+  padding:11px 14px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit;margin-bottom:10px}
+.modal-card input:focus{border-color:rgba(201,169,106,.4)}
+.err{color:#e06c6c;font-size:12px;min-height:18px;margin-bottom:6px;text-align:center}
+.lbl{display:block;font-size:11px;color:var(--text-faint);margin:12px 0 6px;letter-spacing:1px}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:rgba(22,20,16,.96);
+  border:1px solid rgba(201,169,106,.35);color:var(--accent2);padding:10px 26px;border-radius:100px;font-size:12.5px;
+  z-index:300;transition:transform .35s cubic-bezier(.2,.9,.3,1.2);backdrop-filter:blur(10px)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.footer{text-align:center;padding:30px;color:var(--text-faint);font-size:11px;letter-spacing:3px}
+/* 登录入口 - 极简圆点，藏角落 */
+.login-dot{position:fixed;right:18px;bottom:16px;z-index:150;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:12px;color:var(--text-faint);transition:all .2s;backdrop-filter:blur(6px)}
+.login-dot:hover{border-color:rgba(201,169,106,.4);color:var(--accent)}
+.login-dot.logged-in{border-color:rgba(139,124,246,.4);color:#b3a8ff;cursor:default}
+/* 设置抽屉 */
+.drawer{position:fixed;top:0;right:-380px;width:360px;height:100vh;z-index:180;background:var(--bg2);
+  border-left:1px solid var(--card-border);transition:right .35s cubic-bezier(.2,.9,.3,1);padding:26px;overflow-y:auto}
+.drawer.open{right:0}
+.drawer h3{font-family:'Noto Serif SC';font-size:17px;margin-bottom:16px}
+.drawer label{display:block;font-size:11px;color:var(--text-faint);margin:14px 0 6px;letter-spacing:1px}
+.drawer input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:9px;padding:9px 13px;
+  color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.switch{position:relative;display:inline-block;width:40px;height:22px;vertical-align:middle}
+.switch input{opacity:0;width:0;height:0}
+.sl{position:absolute;cursor:pointer;inset:0;background:#333;border-radius:22px;transition:.3s}
+.sl:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.sl{background:linear-gradient(135deg,#d8b877,#8b7cf6)}
+input:checked+.sl:before{transform:translateX(18px)}
+.my-tpl-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1px solid var(--line);
+  border-radius:9px;margin-bottom:7px;font-size:13px;color:var(--text-dim)}
+.my-tpl-item button{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:11px}
+.my-tpl-item button:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header class="topbar">
+  <div class="logo"><div class="logo-mark">✦</div><div class="logo-name">Prompt<em>Atelier</em></div></div>
+  <div class="top-actions">
+    <span class="user-chip" id="userChip" style="display:none"><span class="user-avatar" id="userAvatar">A</span><span id="userName"></span></span>
+    <button class="btn btn-ghost" id="aiBadge" style="display:none;cursor:pointer" onclick="openDrawer('llm')">⚡ AI 已就绪</button>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="kicker">Prompt Atelier</div>
+  <h1>选一个模板，<br>调出<span class="grad">你想要的那张图</span></h1>
+  <p>22 套工业级提示词模板 · 分块精调 · 即时组装 · 一键复制</p>
+</section>
+
+<!-- 工作室 -->
+<div class="studio">
+  <div class="shell">
+    <!-- 模板栏 -->
+    <aside class="sidebar">
+      <div class="side-title">✦ 模板<span class="cnt" id="tplCnt"></span></div>
+      <div class="tpl-scroll" id="tplList"></div>
+    </aside>
+
+    <!-- 编辑主区 -->
+    <main class="main">
+      <div class="tpl-banner" id="tplBanner">
+        <div class="bn-title" id="bnTitle">选择一个模板</div>
+        <div class="bn-when" id="bnWhen">从左侧选择模板体系，开始构建你的提示词。每个模块都可以自由修改。</div>
+      </div>
+
+      <div class="block">
+        <div class="block-head">
+          <span class="block-label"><i></i>主体与场景 <span class="hint">— 描述你要画的核心内容</span></span>
+        </div>
+        <textarea class="block-input big" id="bSubject" placeholder="例如：一位穿白色亚麻长裙的女性站在盛夏荷塘边，手指轻触荷叶…"></textarea>
+      </div>
+
+      <div class="block">
+        <div class="block-head">
+          <span class="block-label"><i></i>视觉风格</span>
+        </div>
+        <div class="chips" id="styleChips"></div>
+        <input class="block-input area-min" id="bStyle" placeholder="或自行输入风格关键词…" style="margin-top:9px">
+      </div>
+
+      <!-- 专业摄影参数 -->
+      <div class="block pro-params">
+        <div class="block-head">
+          <span class="block-label"><i></i>专业摄影参数 <span class="hint">— 相机 · 镜头 · 胶片 · 调色 · 光线</span></span>
+          <button class="btn" style="padding:3px 10px;font-size:11px" onclick="togglePro()" id="proToggle">展开 ▾</button>
+        </div>
+        <div id="proBody" style="display:none">
+          <div id="proGroups"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px">
+            <button class="btn" style="padding:4px 12px;font-size:11px" onclick="clearPro()">清空所选参数</button>
+          </div>
+        </div>
+        <div id="proSummary" style="font-size:12px;color:var(--accent);margin-top:6px;display:none"></div>
+      </div>
+
+      <div class="row2">
+        <div class="block">
+          <div class="block-head"><span class="block-label"><i></i>构图与布局</span></div>
+          <textarea class="block-input area-min" id="bComposition" placeholder="主体位置、机位、景别…"></textarea>
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="block-label"><i></i>光线与氛围</span></div>
+          <textarea class="block-input area-min" id="bLighting" placeholder="光源、影调、氛围…"></textarea>
+        </div>
+      </div>
+
+      <div class="row3">
+        <div class="block">
+          <div class="block-head"><span class="block-label"><i></i>色彩</span></div>
+          <input class="block-input area-min" id="bColor" placeholder="3-4 个主色块">
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="block-label"><i></i>画面比例</span></div>
+          <select class="block-input area-min" id="bAspect" style="padding:10px 13px">
+            <option value="3:4" selected>3:4 竖版</option>
+            <option value="16:9">16:9 横版</option>
+            <option value="1:1">1:1 方形</option>
+            <option value="9:16">9:16 竖屏</option>
+          </select>
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="block-label"><i></i>画面文字</span></div>
+          <input class="block-input area-min" id="bText" placeholder="画面中的文字（可选）">
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-head"><span class="block-label"><i></i>负面约束 <span class="hint">— 不想要的效果</span></span></div>
+        <textarea class="block-input area-min" id="bNegative" placeholder="避免…"></textarea>
+      </div>
+
+      <div class="block">
+        <div class="block-head"><span class="block-label"><i></i>补充说明</span></div>
+        <input class="block-input area-min" id="bExtra" placeholder="其他想加的要求（可选）">
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn-assemble" id="btnAssemble" onclick="assemble()">✦ 组装提示词</button>
+        <button class="btn-ai" id="btnAI" onclick="aiEnhance()" disabled>✦ AI 智能增强</button>
+      </div>
+
+      <div class="result-head">
+        <span class="rt">生成结果</span>
+        <span class="src-tag" id="srcTag"><span class="d"></span><span id="srcText">等待组装</span></span>
+      </div>
+      <div class="prompt-out" id="promptOut"><div class="ph">修改完各模块后，点击「组装提示词」生成完整提示词</div></div>
+      <div class="llm-err" id="llmErr"></div>
+      <div class="result-actions">
+        <button class="btn" id="btnCopy" onclick="copyResult()" style="display:none">⧉ 复制提示词</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="footer">PROMPT ATELIER · 图像提示词工作室</div>
+
+<!-- 登录入口（隐藏角落圆点） -->
+<div class="login-dot" id="loginDot" title="登录">⚙</div>
+
+<!-- 登录 modal -->
+<div class="modal" id="loginModal">
+  <div class="modal-card">
+    <h3>🔐 登录</h3>
+    <div class="sub" id="loginHint">登录后解锁 AI 增强生成</div>
+    <div class="err" id="loginErr"></div>
+    <input type="text" id="loginUser" placeholder="用户名">
+    <input type="password" id="loginPass" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-gold" style="width:100%;padding:11px" onclick="doLogin()">登 录</button>
+  </div>
+</div>
+
+<!-- 设置抽屉 -->
+<div class="drawer" id="drawer">
+  <button class="btn btn-ghost" style="float:right" onclick="closeDrawer()">✕</button>
+  <h3 id="drawerTitle">⚙ 设置</h3>
+  <div id="drawerLLM">
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+      <span style="font-size:13px">启用 AI 增强</span>
+      <label class="switch"><input type="checkbox" id="llmEnabled"><span class="sl"></span></label>
+    </div>
+    <label>Base URL</label>
+    <input type="text" id="llmBaseUrl" placeholder="https://api.openai.com/v1">
+    <label>API Key <span id="keyHint" style="color:var(--text-faint);letter-spacing:0"></span></label>
+    <input type="password" id="llmKey" placeholder="sk-..." onkeydown="if(event.key==='Enter')saveLlm()">
+    <label>模型</label>
+    <input type="text" id="llmModel" placeholder="gpt-4o / deepseek-chat / qwen-max">
+    <button class="btn btn-gold" style="width:100%;margin-top:16px;padding:11px" onclick="saveLlm()">保存配置</button>
+    <div style="font-size:12px;color:var(--text-faint);margin-top:8px" id="saveResult"></div>
+  </div>
+  <div id="drawerLogout" style="margin-top:24px;border-top:1px solid var(--line);padding-top:16px">
+    <button class="btn" style="width:100%" onclick="logout()">退出登录</button>
+  </div>
+  <div id="drawerMyTpls" style="margin-top:24px;border-top:1px solid var(--line);padding-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:15px">🎨 我的模板</h3>
+      <button class="btn" onclick="openTplModal()" style="padding:4px 10px;font-size:11px">＋ 新建</button>
+    </div>
+    <div id="myTplList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 自定义模板 modal -->
+<div class="modal" id="tplModal">
+  <div class="modal-card" style="width:600px;max-height:90vh;overflow-y:auto">
+    <h3 id="tplModalTitle">＋ 创建自定义模板</h3>
+    <input type="hidden" id="editTplId">
+    <label class="lbl">模板名称 *</label>
+    <input type="text" id="ctTitle" placeholder="例如：极简白底产品图">
+    <label class="lbl">分类</label>
+    <input type="text" id="ctCategory" placeholder="例如：产品 / 摄影 / 插画">
+    <label class="lbl">一句话说明</label>
+    <input type="text" id="ctDesc" placeholder="这个模板适合做什么">
+    <label class="lbl">提示词结构（可用 {subject} {style} {aspect} 占位）</label>
+    <textarea class="block-input" id="ctStructure" style="min-height:70px" placeholder="例如：一张{style}风格的{subject}产品图，纯白背景，柔和阴影，比例{aspect}"></textarea>
+    <label class="lbl">风格标签（逗号分隔）</label>
+    <input type="text" id="ctStyles" placeholder="极简, 产品摄影, 白底">
+    <label class="lbl">注意事项 / 负面约束</label>
+    <textarea class="block-input" id="ctPitfalls" style="min-height:50px" placeholder="避免…"></textarea>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="$('tplModal').classList.remove('show')">取消</button>
+      <button class="btn btn-gold" onclick="saveCustomTpl()">保存模板</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let lib={templates:[]}, allCases=[], selectedTpl='', isLogged=false;
+let customTpls=[];
+const PRESETS=['写实摄影','3D渲染','水彩插画','极简海报','暗黑高级','赛博朋克','国风水墨','胶片质感','超现实','杂志大片','Y2K','AI 艺术'];
+
+const $=id=>document.getElementById(id);
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)};
+async function api(url,opts={}){try{const r=await fetch(url,{headers:{'Content-Type':'application/json'},credentials:'include',...opts});return await r.json()}catch(e){return{ok:false,msg:'网络错误'}}}
+
+/* 登录入口逻辑 */
+function showLogin(reason){
+  $('loginHint').textContent=reason||'登录后解锁 AI 增强生成';
+  $('loginErr').textContent='';$('loginModal').classList.add('show');
+}
+$('loginModal').addEventListener('click',e=>{if(e.target===$('loginModal'))$('loginModal').classList.remove('show')});
+async function doLogin(){
+  const u=$('loginUser').value.trim(),p=$('loginPass').value;
+  if(!u||!p){$('loginErr').textContent='请输入账号密码';return}
+  const r=await api('/api/login',{method:'POST',body:JSON.stringify({username:u,password:p})});
+  if(r.ok){$('loginModal').classList.remove('show');$('loginUser').value='';$('loginPass').value='';
+    await refreshAuth();toast('已登录')}
+  else $('loginErr').textContent=r.msg||'登录失败';
+}
+async function logout(){await api('/api/logout',{method:'POST'});location.reload()}
+async function refreshAuth(){
+  const r=await api('/api/me');
+  isLogged=r.ok;
+  const dot=$('loginDot');
+  if(isLogged){
+    dot.innerHTML='✕';dot.classList.add('logged-in');dot.title='点击打开设置';
+    dot.onclick=()=>openDrawer('llm');
+    $('userChip').style.display='flex';
+    $('userAvatar').textContent=(r.user||'A')[0].toUpperCase();
+    $('userName').textContent=r.user;
+    $('aiBadge').style.display='';
+    $('btnAI').disabled=false;
+    loadLlmStatus();
+  } else {
+    dot.innerHTML='⚙';dot.classList.remove('logged-in');dot.title='登录';
+    dot.onclick=()=>showLogin('登录后解锁 AI 增强生成');
+    $('userChip').style.display='none';
+    $('aiBadge').style.display='none';
+    $('btnAI').disabled=true;
+  }
+  // 登录后加载自定义模板到列表
+  if(isLogged)loadMyTpls();
+}
+
+/* 模板 */
+async function loadAll(){
+  const [lr,cr]=await Promise.all([api('/api/library'),api('/api/cases')]);
+  if(lr.ok){lib=lr.data;renderTpls();$('tplCnt').textContent=lib.templates.length+' 套'}
+  if(cr.ok)allCases=cr.cases;
+}
+function renderTpls(){
+  const el=$('tplList');let h='';
+  // 按分类
+  const groups={};
+  lib.templates.forEach(t=>{const g=t.category||'其他';(groups[g]=groups[g]||[]).push(t)});
+  Object.keys(groups).forEach(g=>{
+    h+=`<div class="tpl-group">${g}</div>`;
+    groups[g].forEach(t=>{h+=`<div class="tpl-item ${selectedTpl===t.id?'active':''}" onclick="pickTpl('${t.id}')"><span>${t.title}</span><span class="arrow">→</span></div>`});
+  });
+  el.innerHTML=h;
+}
+function pickTpl(id){
+  selectedTpl=id;
+  const t=lib.templates.find(x=>x.id===id);
+  if(!t)return;
+  // 填充模板默认值(游客可直接改,不持久化)
+  $('bnTitle').textContent=t.title;
+  $('bnWhen').textContent=t.useWhen||t.description||'';
+  $('tplBanner').classList.add('show');
+  // 构图默认=模板guidance
+  const g=Array.isArray(t.guidance)?t.guidance.join('；'):(t.guidance||'');
+  $('bComposition').value=g;
+  $('bComposition').placeholder='主体位置、机位、景别…';
+  // 负面默认=模板pitfalls
+  const p=Array.isArray(t.pitfalls)?t.pitfalls.join('；'):(t.pitfalls||'');
+  $('bNegative').value=p;
+  $('bNegative').placeholder='避免…';
+  renderTpls();
+  // 滚动到编辑区
+  $('tplBanner').scrollIntoView({behavior:'smooth',block:'start'});
+  toast('已载入「'+t.title+'」模板，可自由修改各模块');
+}
+
+/* ── 专业摄影参数 ── */
+let proStyles=null, proSel={};   /* proSel[groupId] = itemIndex */
+
+function togglePro(){
+  const b=$('proBody'), t=$('proToggle');
+  if(b.style.display==='none'){b.style.display='';t.textContent='收起 ▴'}
+  else{b.style.display='none';t.textContent='展开 ▾'}
+}
+async function loadProStyles(){
+  const r=await api('/api/styles');
+  if(!r.ok||!r.data)return;
+  proStyles=r.data.groups||[];
+  renderPro();
+}
+function renderPro(){
+  const el=$('proGroups');if(!proStyles)return;
+  el.innerHTML=proStyles.map(g=>`
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;letter-spacing:1px">${g.name} <span style="opacity:.6">${g.desc||''}</span></div>
+      <div class="chips" style="max-height:88px;overflow-y:auto">
+        ${g.items.map((it,i)=>`<span class="chip ${proSel[g.id]===i?'on':''}" title="${it.tag||''}" onclick="pickPro('${g.id}',${i})">${it.zh}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function pickPro(gid, idx){
+  proSel[gid]=(proSel[gid]===idx)?undefined:idx;
+  if(proSel[gid]===undefined)delete proSel[gid];
+  renderPro();updateProSummary();
+}
+function collectProParams(){
+  const out={};
+  if(!proStyles)return out;
+  proStyles.forEach(g=>{
+    const i=proSel[g.id];
+    if(i!==undefined&&g.items[i])out[g.id]=g.items[i].prompt;
+  });
+  return out;
+}
+function updateProSummary(){
+  const p=collectProParams();
+  const names=[];
+  if(proStyles)proStyles.forEach(g=>{const i=proSel[g.id];if(i!==undefined&&g.items[i])names.push(g.items[i].zh)});
+  const el=$('proSummary');
+  if(names.length){el.style.display='';el.textContent='已选参数：'+names.join(' · ')}
+  else el.style.display='none';
+}
+function clearPro(){proSel={};renderPro();updateProSummary();toast('已清空参数')}
+
+/* 风格chips */
+(function(){
+  PRESETS.forEach(s=>{const c=document.createElement('button');c.className='chip';c.textContent=s;
+    c.onclick=()=>{c.classList.toggle('on');syncStyleInput()};$('styleChips').appendChild(c)});
+})();
+function syncStyleInput(){
+  const on=[...document.querySelectorAll('#styleChips .chip.on')].map(c=>c.textContent);
+  const manual=$('bStyle').value.trim();
+  $('bStyle').value=[...new Set([...on,...(manual?manual.split(/[,，、]/).map(s=>s.trim()):[])])].join('、');
+}
+
+/* 组装(游客可用,纯前端) */
+function getBlocks(){
+  return {subject:$('bSubject').value,style:$('bStyle').value,composition:$('bComposition').value,
+    lighting:$('bLighting').value,color:$('bColor').value,negative:$('bNegative').value,
+    extra:$('bExtra').value,aspect:$('bAspect').value,text:$('bText').value};
+}
+function assemble(){
+  const b=getBlocks();
+  if(!b.subject.trim()){toast('先描述主体与场景');$('bSubject').focus();return}
+  const pro=collectProParams();
+  const parts=[];
+  if(selectedTpl){const t=lib.templates.find(x=>x.id===selectedTpl);if(t)parts.push('【模板】'+t.title)}
+  if(b.subject.trim())parts.push('主体与场景：'+b.subject.trim());
+  if(b.style.trim())parts.push('视觉风格：'+b.style.trim());
+  const tech=Object.values(pro).filter(v=>v&&v.trim());
+  if(tech.length)parts.push('摄影参数：'+tech.join(', '));
+  if(b.composition.trim())parts.push('构图与布局：'+b.composition.trim());
+  if(b.lighting.trim())parts.push('光线与氛围：'+b.lighting.trim());
+  if(b.color.trim())parts.push('色彩：'+b.color.trim());
+  if(b.text.trim())parts.push('文字要求："'+b.text.trim()+'"(拼写必须准确)');
+  parts.push('画面比例：'+b.aspect);
+  if(b.extra.trim())parts.push('补充：'+b.extra.trim());
+  if(b.negative.trim())parts.push('负面约束：'+b.negative.trim());
+  else parts.push('负面约束：避免五颜六色、过度饱和、塑料感、AI假人感、多余文字');
+  showResult(parts.join('\n'),'手动组装','local');
+}
+function showResult(txt,label,type){
+  $('promptOut').innerHTML='';$('promptOut').textContent=txt;
+  $('srcText').textContent=label;
+  $('srcTag').className='src-tag'+(type==='llm'?' llm':'');
+  $('btnCopy').style.display='';
+}
+async function copyResult(){
+  const t=$('promptOut').textContent;
+  if(!t||t.includes('点击「组装'))return;
+  try{await navigator.clipboard.writeText(t);toast('✅ 已复制')}
+  catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('✅ 已复制')}
+}
+
+/* AI增强(需登录) */
+async function aiEnhance(){
+  if(!isLogged){showLogin('登录后解锁 AI 增强生成');return}
+  const b=getBlocks();
+  if(!b.subject.trim()){toast('先描述主体与场景');return}
+  const btn=$('btnAI');btn.disabled=true;btn.textContent='✦ AI 思考中…';
+  $('llmErr').textContent='';
+  const r=await api('/api/generate',{method:'POST',body:JSON.stringify({template:selectedTpl,blocks:b,params:collectProParams()})});
+  btn.disabled=false;btn.textContent='✦ AI 智能增强';
+  if(r.ok){showResult(r.prompt,r.source==='llm'?'AI 智能生成':'本地组装','llm'==='llm'?'llm':'local');
+    if(r.source==='local')$('llmErr').textContent=r.llm_error||'';
+    else $('llmErr').textContent=''}
+  else if(!r.ok&&r.msg){$('llmErr').textContent=r.msg}
+}
+
+/* 登录角标/抽屉 */
+function openDrawer(section){
+  $('drawer').classList.add('open');
+  if(section==='llm'){loadLlmConfig()}
+}
+function closeDrawer(){$('drawer').classList.remove('open')}
+async function loadLlmStatus(){
+  const r=await api('/api/llm-status');
+  if(r.ok){$('aiBadge').textContent=r.enabled?('⚡ AI · '+(r.model||'')):'⚡ AI 待配置'}
+}
+async function loadLlmConfig(){
+  const r=await api('/api/llm-config');
+  if(!r.ok){return}
+  const c=r.config;
+  $('llmEnabled').checked=c.enabled;
+  $('llmBaseUrl').value=c.base_url||'https://api.openai.com/v1';
+  $('llmModel').value=c.model||'';
+  $('keyHint').textContent=c.has_key?'(已设置)':'';
+  $('saveResult').textContent='';
+}
+async function saveLlm(){
+  const body={enabled:$('llmEnabled').checked,base_url:$('llmBaseUrl').value,model:$('llmModel').value};
+  const k=$('llmKey').value;if(k)body.api_key=k;
+  const r=await api('/api/llm-config',{method:'POST',body:JSON.stringify(body)});
+  $('saveResult').textContent=r.msg||'';
+  if(r.ok){$('llmKey').value='';$('keyHint').textContent='(已设置)';loadLlmStatus();toast('配置已保存')}
+}
+
+/* 自定义模板 */
+async function loadMyTpls(){
+  const r=await api('/api/custom-templates');
+  if(!r.ok)return;
+  customTpls=r.templates;
+  const el=$('myTplList');
+  if(!r.templates.length){el.innerHTML='<div style="font-size:12px;color:var(--text-faint)">暂无自定义模板</div>';return}
+  el.innerHTML=r.templates.map(t=>`<div class="my-tpl-item"><span>${t.title}</span>
+    <span><button onclick="useCustomTpl('${t.id}')">使用</button>
+    <button onclick="delCustomTpl('${t.id}')">删除</button></span></div>`).join('');
+}
+function useCustomTpl(id){const t=customTpls.find(x=>x.id===id);if(!t)return;
+  selectedTpl=id;
+  $('bnTitle').textContent=t.title+'（自定义）';
+  $('bnWhen').textContent=t.description||'';
+  $('tplBanner').classList.add('show');
+  if(t.structure){$('bComposition').value=t.structure;$('bComposition').placeholder='按模板结构填写'}
+  if(t.guidance)$('bNegative').value=t.guidance;
+  $('tplBanner').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function delCustomTpl(id){const r=await api('/api/custom-templates/'+id,{method:'DELETE'});if(r.ok){toast('已删除');loadMyTpls()}}
+function openTplModal(){
+  if(!isLogged){showLogin('登录后可创建自定义模板');return}
+  $('tplModalTitle').textContent='＋ 创建自定义模板';
+  $('editTplId').value='';
+  ['ctTitle','ctCategory','ctDesc','ctStructure','ctStyles','ctPitfalls'].forEach(i=>$(i).value='');
+  $('tplModal').classList.add('show');
+  setTimeout(()=>$('ctTitle').focus(),80);
+}
+async function saveCustomTpl(){
+  const title=$('ctTitle').value.trim();
+  if(!title){toast('模板名称必填');return}
+  const editId=$('editTplId').value;
+  const body={title,category:$('ctCategory').value.trim(),description:$('ctDesc').value.trim(),
+    structure:$('ctStructure').value.trim(),style_tags:$('ctStyles').value,guidance:$('ctPitfalls').value.trim()};
+  let r;
+  if(editId)r=await api('/api/custom-templates/'+editId,{method:'PUT',body:JSON.stringify(body)});
+  else r=await api('/api/custom-templates',{method:'POST',body:JSON.stringify(body)});
+  if(r.ok){toast('模板已保存');$('tplModal').classList.remove('show');loadMyTpls()}
+  else toast(r.msg||'保存失败');
+}
+
+(async function(){await refreshAuth();await loadAll();await loadProStyles()})();
+</script>
+</body>
+</html>
