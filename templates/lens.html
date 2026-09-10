@@ -134,7 +134,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
       <div class="dof-bar"><i id="dofFill" style="width:40%"></i></div>
     </div>
 
-    <div class="s-title">生成参数</div>
+    <div class="s-title">工作台提示词(同步)</div>
+    <div class="out-box" id="studioPrompt" style="max-height:190px;color:var(--text2)">尚未在工作台生成提示词。<br><span style="color:var(--text3)">前往工作台选择参数后，这里会同步显示完整提示词。</span></div>
+
+    <div class="s-title">本页镜头参数</div>
     <div class="out-box" id="paramOut">调节上方参数，生成可直接使用的英文摄影参数。</div>
     <div class="actions"><button class="btn btn-gold" id="toStudioBtn">→ 应用到工作台</button></div>
     <div class="actions"><button class="btn" id="copyBtn">复制参数</button><button class="btn" id="resetBtn">重置</button></div>
@@ -278,8 +281,34 @@ addEventListener('wheel',e=>{
   document.getElementById('flSlider').value=fl;update();
 },{passive:false});
 
+/* 读取工作台同步的状态 */
+function loadStudioState(){
+  try{
+    const st=JSON.parse(localStorage.getItem('pa-state')||'null');
+    if(st&&st.text){
+      document.getElementById('studioPrompt').textContent=st.text;
+      document.getElementById('studioPrompt').style.color='var(--text)';
+    }
+    const lc=JSON.parse(localStorage.getItem('pa-lens-cur')||'null');
+    if(lc&&lc.focal){
+      fl=lc.focal;apIdx=Math.max(0,AP_PRESETS.indexOf(lc.aperture));
+      if(apIdx<0)apIdx=4;
+      document.getElementById('flSlider').value=fl;
+      document.getElementById('apSlider').value=apIdx;
+    }
+  }catch(e){}
+}
+loadStudioState();
 focusZ=-0.2;
 init();
+/* 定时刷新同步 */
+setInterval(()=>{
+  try{
+    const st=JSON.parse(localStorage.getItem('pa-state')||'null');
+    if(st&&st.text){const el=document.getElementById('studioPrompt');
+      if(el.textContent!==st.text){el.textContent=st.text;el.style.color='var(--text)'}}
+  }catch(e){}
+},1500);
 </script>
 </body>
 </html>
