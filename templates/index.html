@@ -316,12 +316,12 @@ const BLOCKS = [
   {id:'subject',    icon:'🎯', name:'主体场景', hint:'画面的核心内容', type:'text'},
   {id:'character',  icon:'👤', name:'人物特征', hint:'是否有人物 + 特征（可多选）', type:'multi', hasSwitch:true},
   {id:'style',      icon:'🎨', name:'视觉风格', hint:'整体风格取向', type:'multi'},
-  {id:'lighting',   icon:'💡', name:'光线氛围', hint:'光源与情绪', type:'single'},
-  {id:'color',      icon:'🌈', name:'色彩调性', hint:'主色与色温', type:'single'},
-  {id:'grading',    icon:'🎞️', name:'调色滤镜', hint:'色彩分级风格', type:'single'},
+  {id:'lighting',   icon:'💡', name:'光线氛围', hint:'光源与情绪（可多选）', type:'multi'},
+  {id:'color',      icon:'🌈', name:'色彩调性', hint:'主色与色温（可多选）', type:'multi'},
+  {id:'grading',    icon:'🎞️', name:'调色滤镜', hint:'色彩分级风格（可多选）', type:'multi'},
   {id:'gear',       icon:'📷', name:'摄影器材', hint:'机身 / 镜头 / 光圈 / 胶片', type:'multi'},
   {id:'exposure',   icon:'⚙️', name:'拍摄参数', hint:'快门 / ISO / 白平衡 / 画幅', type:'multi'},
-  {id:'composition',icon:'📐', name:'构图技法', hint:'机位 / 景别 / 构图', type:'single'},
+  {id:'composition',icon:'📐', name:'构图技法', hint:'机位 / 景别 / 构图（可多选）', type:'multi'},
   {id:'negative',   icon:'🚫', name:'负面约束', hint:'不想要的效果', type:'multi'},
 ];
 const S = {
@@ -393,11 +393,10 @@ function switchSrc(t){S.srcTab=t;$('tabTpl').classList.toggle('on',t==='tpl');$(
 /* ═══════ 块渲染 ═══════ */
 function blkVal(id){
   const b=S.blocks[id];
-  const gids=Object.keys(b.groups||{});
   const parts=[];
   if(b.text)parts.push(b.text);
   (b.items||[]).forEach(i=>parts.push(i.zh));
-  gids.forEach(g=>parts.push(b.groups[g].zh));
+  Object.values(b.groups||{}).forEach(g=>parts.push(g.zh));
   return parts;
 }
 function renderBlocks(){
@@ -488,7 +487,7 @@ function getOptSource(field){
   if(field==='subject')return ex.subjects?.groups||[];
   if(field==='character')return ex.characters?.groups||[];
   if(field==='style')return [
-    {id:'style_preset',name:'常用风格',items:STYLE_PRESETS.map(s=>({zh:s,prompt:''}))},
+    {id:'style_preset',name:'常用风格',items:STYLE_PRESETS},
     ...by(['filter','lighting']).map(g=>({id:'style_'+g.id,name:g.name,items:g.items}))
   ];
   if(field==='lighting')return by(['lighting']);
@@ -517,23 +516,19 @@ const NEG_PRESETS=[
 ];
 function isSel(field,gid,idx){
   const b=S.blocks[field];
-  if(b.groups&&b.groups[gid])return b.groups[gid].idx===idx;
   return (b.items||[]).some(i=>i.gid===gid&&i.idx===idx);
 }
 function pickItem(field,gid,idx,ev){
   const g=getOptSource(field).find(x=>x.id===gid);if(!g)return;
   const it=g.items[idx];const b=S.blocks[field];
   const blk=BLOCKS.find(x=>x.id===field);
-  if(blk.type==='single'){
-    if(b.groups[gid]&&b.groups[gid].idx===idx)delete b.groups[gid];
-    else b.groups[gid]={idx,zh:it.zh,prompt:it.prompt||''};
-  }else{
+  {
     b.items=b.items||[];
     const pos=b.items.findIndex(i=>i.gid===gid&&i.idx===idx);
     if(pos>=0)b.items.splice(pos,1);
     else{
-      /* 同组只保留一个(每组单选: 表情/服装/发型等同组互斥) */
-      for(let i=b.items.length-1;i>=0;i--)if(b.items[i].gid===gid)b.items.splice(i,1);
+      /* 仅人物块组内互斥(表情/服装等), 其余块自由多选 */
+      if(field==='character'){for(let i=b.items.length-1;i>=0;i--)if(b.items[i].gid===gid)b.items.splice(i,1)}
       b.items.push({gid,idx,zh:it.zh,prompt:it.prompt||''});
     }
   }
@@ -598,12 +593,12 @@ function buildPrompt(){
   add('主体与场景',[B.subject.text]);
   if(B.character.enabled)add('人物特征',[...(B.character.items||[]).map(i=>i.zh),...Object.values(B.character.groups||{}).map(g=>g.zh)]);
   add('视觉风格',[...(B.style.items||[]).map(i=>i.zh),B.style.text]);
-  add('光线氛围',[...Object.values(B.lighting.groups||{}).map(g=>g.zh),B.lighting.text]);
-  add('色彩调性',[...Object.values(B.color.groups||{}).map(g=>g.zh),B.color.text]);
-  add('调色滤镜',[...Object.values(B.grading.groups||{}).map(g=>g.prompt||g.zh),B.grading.text]);
+  add('光线氛围',[...(B.lighting.items||[]).map(i=>i.zh),B.lighting.text]);
+  add('色彩调性',[...(B.color.items||[]).map(i=>i.zh),B.color.text]);
+  add('调色滤镜',[...(B.grading.items||[]).map(i=>i.prompt||i.zh),B.grading.text]);
   add('摄影器材',[...(B.gear.items||[]).map(i=>i.prompt||i.zh),B.gear.text]);
   add('拍摄参数',[...(B.exposure.items||[]).map(i=>i.prompt||i.zh),B.exposure.text]);
-  add('构图技法',[...Object.values(B.composition.groups||{}).map(g=>g.prompt||g.zh),B.composition.text]);
+  add('构图技法',[...(B.composition.items||[]).map(i=>i.prompt||i.zh),B.composition.text]);
   const neg=[...(B.negative.items||[]).map(i=>i.prompt||i.zh)].filter(Boolean);
   if(!neg.length)neg.push('避免五颜六色、塑料感、AI假人感、多余文字');
   p.push('负面约束：'+neg.join(', '));
@@ -658,13 +653,42 @@ function pickTpl(id){
   toast(filled?`已应用「${t.title}」·填充${filled}项${keptCount?`，保留你修改的${keptCount}项`:''}`:`已切换到「${t.title}」，保留你已有的内容`);
 }
 function pickCase(cid){
-  const s=starters.find(x=>x.id===cid);if(!s)return;
-  /* 案例作为主体描述填入(不覆盖其他块) */
+  const st=starters.find(x=>x.id===cid);if(!st)return;
   if(S.blocks.subject.text&&!confirm('主体场景已有内容，是否覆盖？'))return;
-  S.blocks.subject.text=s.prompt.slice(0,600);
-  renderBlocks();renderOpts();switchSrc('case');
+  let prompt=(st.prompt||'').trim();
+  let split=null;
+
+  /* 案例可能是 JSON 结构 → 智能拆到各块 */
+  if(prompt.startsWith('{')){
+    try{
+      const o=JSON.parse(prompt);
+      split={};
+      const scene=[o.scene,o.subject,o.detail].filter(Boolean).join(' ');
+      if(scene)split.subject=(o.title?`【${o.title}】`:'')+scene;
+      if(o.lighting)split.lighting=o.lighting;
+      if(o.style)split.style=o.style;
+      if(o.composition)split.composition=o.composition;
+      if(o.atmosphere)split.color=o.atmosphere;
+      prompt=scene||prompt;
+    }catch(e){/* 保持原样 */}
+  }
+
+  if(split){
+    /* 结构化案例: 分配到对应块 */
+    if(split.subject)S.blocks.subject.text=split.subject.slice(0,700);
+    if(split.lighting)S.blocks.lighting.text=split.lighting.slice(0,400);
+    if(split.style)S.blocks.style.text=split.style.slice(0,300);
+    if(split.composition)S.blocks.composition.text=split.composition.slice(0,400);
+    if(split.color)S.blocks.color.text=split.color.slice(0,200);
+    toast('已载入案例「'+st.title+'」· 已拆分到 5 个块');
+  } else {
+    S.blocks.subject.text=prompt.slice(0,700);
+    toast('已载入案例：'+st.title);
+  }
+  renderBlocks();renderOpts();switchSrc('case');switchRight('opt');
   if(window.__update3D)window.__update3D();
-  toast('已载入案例：'+s.title);
+  /* 自动切到 3D 看效果 */
+  setTimeout(()=>{if(window.__update3D)window.__update3D()},300);
 }
 
 /* ═══════ 右侧视图 ═══════ */
@@ -780,7 +804,7 @@ function init3D(){
   ren3=new THREE.WebGLRenderer({antialias:true});
   ren3.setPixelRatio(Math.min(devicePixelRatio,2));ren3.setSize(W(),H());
   ren3.shadowMap.enabled=true;ren3.shadowMap.type=THREE.PCFSoftShadowMap;
-  ren3.toneMapping=THREE.ACESFilmicToneMapping;ren3.toneMappingExposure=1.15;
+  ren3.toneMapping=THREE.ACESFilmicToneMapping;ren3.toneMappingExposure=1.5;
   wrap3.appendChild(ren3.domElement);
 
   scene3=new THREE.Scene();
@@ -790,7 +814,7 @@ function init3D(){
   cam3=new THREE.PerspectiveCamera(42,W()/H(),0.1,200);
 
   /* ── 灯光 ── */
-  ambL=new THREE.AmbientLight(0x8080a8,2.2);scene3.add(ambL);
+  ambL=new THREE.AmbientLight(0x9094b8,2.9);scene3.add(ambL);
   keyL=new THREE.DirectionalLight(0xffe0b8,2.6);
   keyL.position.set(4.5,7.5,5);keyL.castShadow=true;
   keyL.shadow.mapSize.set(1024,1024);
@@ -830,22 +854,33 @@ function init3D(){
     m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene3.add(m);furn3.push(m);return m;
   };
   /* 桌子 */
-  furn(new THREE.BoxGeometry(2.2,.09,1.1),0x6b543c,0,.75,-3.2,.6);
+  furn(new THREE.BoxGeometry(2.2,.09,1.1),0x8a6a48,0,.75,-2.6,.6);
   furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,-1,.38,-2.8,.65);
   furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,1,.38,-2.8,.65);
   furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,-1,.38,-3.6,.65);
   furn(new THREE.BoxGeometry(.09,.75,.09),0x5a4632,1,.38,-3.6,.65);
   /* 椅子 */
-  furn(new THREE.BoxGeometry(.72,.07,.72),0x7a6248,1.9,.46,-1.4,.62);
-  furn(new THREE.BoxGeometry(.72,.85,.07),0x7a6248,1.9,.88,-1.05,.62);
+  furn(new THREE.BoxGeometry(.72,.07,.72),0x9a7c58,1.9,.46,-1.1,.62);
+  furn(new THREE.BoxGeometry(.72,.85,.07),0x9a7c58,1.9,.88,-0.75,.62);
   /* 花瓶 + 植物 */
-  furn(new THREE.CylinderGeometry(.14,.19,.42,16),0xb8b0a0,-1.4,1.0,-3.2,.4,.25);
-  furn(new THREE.SphereGeometry(.34,16,12),0x3f6b45,-1.4,1.6,-3.2,.85);
+  furn(new THREE.CylinderGeometry(.14,.19,.42,16),0xd0c8b8,-1.35,1.0,-2.6,.4,.25);
+  furn(new THREE.SphereGeometry(.34,16,12),0x4f8a55,-1.35,1.6,-2.6,.85);
   /* 落地灯 */
   furn(new THREE.CylinderGeometry(.02,.02,2.2,10),0x333340,2.6,1.1,-3.4,.5,.4);
-  furn(new THREE.CylinderGeometry(.26,.34,.34,18),0xd8c8a8,2.6,2.3,-3.4,.8);
+  furn(new THREE.CylinderGeometry(.26,.34,.34,18),0xf0e0b8,2.6,2.3,-2.9,.8);
   /* 画框 */
   furn(new THREE.BoxGeometry(1.3,1.7,.06),0x3a3428,-2.6,2.4,-8.8,.7);
+  /* 书架 */
+  furn(new THREE.BoxGeometry(.5,1.9,1.4),0x59493a,3.4,.95,-6.2,.75);
+  furn(new THREE.BoxGeometry(.12,.06,1.3),0x8a7256,3.1,1.5,-6.2,.7);
+  furn(new THREE.BoxGeometry(.12,.06,1.3),0x8a7256,3.1,1.05,-6.2,.7);
+  /* 矮几+摆件 */
+  furn(new THREE.BoxGeometry(1.1,.08,.6),0x6e5740,-2.3,.42,-2.0,.65);
+  furn(new THREE.SphereGeometry(.11,14,12),0xb8934f,-2.3,.58,-2.0,.35,.6);
+  /* 靠墙绿植(高) */
+  furn(new THREE.CylinderGeometry(.2,.26,.5,16),0x8a7a68,-4.2,.25,-7.6,.8);
+  furn(new THREE.SphereGeometry(.48,16,12),0x3d6b42,-4.2,1.0,-7.6,.9);
+  furn(new THREE.SphereGeometry(.34,14,12),0x4a7d4e,-3.9,.7,-7.4,.9);
   /* 地毯 */
   const rug=new THREE.Mesh(new THREE.PlaneGeometry(4.6,3.2),
     new THREE.MeshStandardMaterial({color:0x3a3238,roughness:.95}));
@@ -911,10 +946,41 @@ function init3D(){
     const sh=new THREE.Mesh(new THREE.BoxGeometry(.15,.09,.3),shoeM);
     sh.position.set(sd*.115,.045,.03);sh.castShadow=true;person3.add(sh);
   });
-  person3.userData={clothM,hairM,skinM};
-  person3.position.set(0,0,-0.4);
+  /* 服装轮廓(裙摆/外套, 增强人形辨识) */
+  const skirt=new THREE.Mesh(new THREE.CylinderGeometry(.26,.44,.62,20,1,true),clothM);
+  skirt.position.y=.72;skirt.castShadow=true;person3.add(skirt);
+  /* 腰带 */
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.252,.022,8,24),
+    new THREE.MeshStandardMaterial({color:0x6a5230,roughness:.45,metalness:.35}));
+  belt.rotation.x=Math.PI/2;belt.position.y=.85;person3.add(belt);
+  person3.userData={clothM,hairM,skinM,skirt};
+  person3.position.set(0,0,-0.2);
+  person3.scale.setScalar(1.22);
   scene3.add(person3);
   personParts={head,hair,torso};
+
+  /* ── 氛围粒子(花瓣/尘埃/光斑) ── */
+  const pCount=110, pGeo=new THREE.BufferGeometry();
+  const pPos=new Float32Array(pCount*3);
+  for(let i=0;i<pCount;i++){
+    pPos[i*3]=(Math.random()-0.5)*9;
+    pPos[i*3+1]=Math.random()*4.4+0.2;
+    pPos[i*3+2]=(Math.random()-0.5)*11-1;
+  }
+  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+  const pMat=new THREE.PointsMaterial({color:0xf0d8b8,size:0.075,transparent:true,opacity:.75,
+    sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  const particles=new THREE.Points(pGeo,pMat);
+  scene3.add(particles);
+  window.__particles={mesh:particles,mat:pMat,geo:pGeo,base:pPos.slice(0)};
+
+  /* ── 窗光斑(地面投影, 强化氛围) ── */
+  const beam=new THREE.Mesh(new THREE.PlaneGeometry(2.6,7),
+    new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.10,
+      blending:THREE.AdditiveBlending,depthWrite:false}));
+  beam.rotation.x=-Math.PI/2;beam.rotation.z=-0.35;beam.position.set(-2.6,.03,-2.5);
+  scene3.add(beam);
+  window.__beam=beam;
 
   ready3=true;
   addEventListener('resize',()=>{
@@ -930,29 +996,35 @@ function update3D(){
   if(!ready3)return;
   const B=S.blocks;
   const txt=arr=>arr.filter(Boolean).join(' ');
-  const charOn=B.character.enabled;
+  /* 主体文本(含案例载入内容)也参与分析 → 案例与3D是同一套 */
+  const subjTxt=(B.subject.text||'');
+  const peopleWord=/woman|women|girl|man|men|boy|person|people|portrait|couple|model|female|male|figure|character|human|child|kid|人物|女|男|少女|人像|情侣|模特|肖像|face|she |he /i.test(subjTxt);
+  const charOn=B.character.enabled||peopleWord;   /* 案例含人物词时自动显示人形 */
   person3.visible=charOn;
+  if(charOn&&!B.character.enabled)setTimeout(()=>{const sw=document.querySelector('#paneOpt .sw input');
+    if(sw&&!sw.checked){sw.checked=true;S.blocks.character.enabled=true;}},0);
 
   const styleTxt=txt([
-    ...B.style.items.map(i=>i.zh), B.style.text,
+    ...B.style.items.map(i=>i.zh), B.style.text, subjTxt, B.composition.text,
     ...Object.values(B.character.groups||{}).map(g=>g.zh),
     ...(B.character.items||[]).map(i=>i.zh)
   ]);
-  const lightTxt=txt([...Object.values(B.lighting.groups||{}).map(g=>g.zh), B.lighting.text])+' '+styleTxt;
-  const gradTxt=txt([...Object.values(B.grading.groups||{}).map(g=>g.zh), ...Object.values(B.color.groups||{}).map(g=>g.zh), B.color.text, B.grading.text]);
-  const gearTxt=txt([...(B.gear.items||[]).map(i=>i.zh), B.gear.text, ...(B.exposure.items||[]).map(i=>i.zh), B.exposure.text]);
+  const lightTxt=txt([...(B.lighting.items||[]).map(i=>i.zh), B.lighting.text])+' '+styleTxt+' '+subjTxt;
+  const gradTxt=txt([...(B.grading.items||[]).map(i=>i.zh||i.prompt), ...(B.color.items||[]).map(i=>i.zh), B.color.text, B.grading.text])+' '+subjTxt;
+  const gearTxt=txt([...(B.gear.items||[]).map(i=>i.zh+' '+(i.prompt||'')), B.gear.text, ...(B.exposure.items||[]).map(i=>i.zh+' '+(i.prompt||'')), B.exposure.text])+' '+subjTxt;
 
   /* 服装颜色 */
   const cm=person3.userData.clothM;
-  if(/纯欲|白|婚纱|清爽|居服|棉麻/.test(styleTxt))cm.color.setHex(0xf0e9dd);
-  else if(/黑|暗黑|皮|机能|酷/.test(styleTxt))cm.color.setHex(0x2b2b36);
-  else if(/红|港风|复古|晚礼/.test(styleTxt))cm.color.setHex(0x8a3636);
-  else if(/蓝|牛仔|户外|通勤/.test(styleTxt))cm.color.setHex(0x39557f);
-  else if(/绿|森系|汉服|中式/.test(styleTxt))cm.color.setHex(0x46654c);
-  else if(/金|名媛|Old Money|轻奢/.test(styleTxt))cm.color.setHex(0xb4904e);
-  else if(/粉|甜|少女|Y2K/.test(styleTxt))cm.color.setHex(0xd9a3b0);
-  else if(/紫|梦幻/.test(styleTxt))cm.color.setHex(0x6f5fa8);
+  if(/纯欲|白|婚纱|清爽|居服|棉麻|white|cream|linen/.test(styleTxt))cm.color.setHex(0xf0e9dd);
+  else if(/黑|暗黑|皮|机能|酷|black|dark|leather|goth/.test(styleTxt))cm.color.setHex(0x2b2b36);
+  else if(/红|港风|复古|晚礼|red|crimson|vintage/.test(styleTxt))cm.color.setHex(0x8a3636);
+  else if(/蓝|牛仔|户外|通勤|blue|denim|navy/.test(styleTxt))cm.color.setHex(0x39557f);
+  else if(/绿|森系|汉服|中式|green|forest|kimono/.test(styleTxt))cm.color.setHex(0x46654c);
+  else if(/金|名媛|Old Money|轻奢|gold|luxury|elegant/.test(styleTxt))cm.color.setHex(0xb4904e);
+  else if(/粉|甜|少女|Y2K|pink|pastel|blossom|romantic/.test(styleTxt))cm.color.setHex(0xd9a3b0);
+  else if(/紫|梦幻|purple|dreamy/.test(styleTxt))cm.color.setHex(0x6f5fa8);
   else cm.color.setHex(0xcfc6b6);
+  if(person3.userData.skirt)person3.userData.skirt.material=cm;
   /* 发色 */
   const hm=person3.userData.hairM;
   if(/银白|白发/.test(styleTxt))hm.color.setHex(0xd8d4cc);
@@ -962,27 +1034,27 @@ function update3D(){
 
   /* 光线: 6 种氛围明显区分 */
   let bg=0x0a0a12, fogD=0.022;
-  if(/黄金|日落|傍晚|夕阳/.test(lightTxt)){
+  if(/黄金|日落|傍晚|夕阳|golden hour|sunset|sunrise|warm sunlight|golden light/i.test(lightTxt)){
     keyL.color.setHex(0xffa848);keyL.intensity=3.4;keyL.position.set(-5,4.2,4);
     ambL.color.setHex(0x6b5a4a);ambL.intensity=1.5;rimL.intensity=1.2;rimL.color.setHex(0xffc98a);
     winLight.material.color.setHex(0xffb055);bg=0x1c1408;fogD=0.026;
-  } else if(/蓝调|冷|阴|雾|忧郁/.test(lightTxt)){
+  } else if(/蓝调|冷|阴|雾|忧郁|blue hour|overcast|moody|cold light|melanchol/i.test(lightTxt)){
     keyL.color.setHex(0x9dc0ff);keyL.intensity=1.9;keyL.position.set(3,6,3);
     ambL.color.setHex(0x4a5570);ambL.intensity=2.4;rimL.intensity=1.4;rimL.color.setHex(0x7ba8ff);
     winLight.material.color.setHex(0xa8c8ff);bg=0x0c1220;fogD=0.03;
-  } else if(/霓虹|赛博|夜|霓/.test(lightTxt)){
+  } else if(/霓虹|赛博|夜|霓|neon|cyberpunk|night|club|synth/i.test(lightTxt)){
     keyL.color.setHex(0xff56a8);keyL.intensity=2.8;
     ambL.color.setHex(0x3a2a55);ambL.intensity=1.2;rimL.intensity=2.6;rimL.color.setHex(0x36d8ff);
     winLight.material.color.setHex(0xff56c8);bg=0x140a1c;fogD=0.028;
-  } else if(/烛|暖|室内|窗光|柔/.test(lightTxt)){
+  } else if(/烛|暖|室内|窗光|柔|candle|indoor|window light|soft light|diffused|cozy/i.test(lightTxt)){
     keyL.color.setHex(0xffcf96);keyL.intensity=2.4;keyL.position.set(-4,5,4);
     ambL.color.setHex(0x6a5a48);ambL.intensity=1.9;rimL.intensity=1.0;rimL.color.setHex(0xffd9b0);
     winLight.material.color.setHex(0xffdca8);bg=0x18120c;fogD=0.024;
-  } else if(/低调|暗|戏剧|伦勃朗|硬/.test(lightTxt)){
+  } else if(/低调|暗|戏剧|伦勃朗|硬|low key|dramatic|chiaroscuro|hard light|rembrandt|noir/i.test(lightTxt)){
     keyL.color.setHex(0xffd9a0);keyL.intensity=3.8;keyL.position.set(-3.5,6,2.5);
     ambL.color.setHex(0x2a2a38);ambL.intensity=0.5;rimL.intensity=1.6;rimL.color.setHex(0x9a8cff);
     winLight.material.opacity=.5;bg=0x06060a;fogD=0.026;
-  } else if(/高调|明亮|清透|散射/.test(lightTxt)){
+  } else if(/高调|明亮|清透|散射|high key|bright|airy|clean|white background/i.test(lightTxt)){
     keyL.color.setHex(0xfff4e2);keyL.intensity=2.2;keyL.position.set(3,7,4);
     ambL.color.setHex(0x8890a8);ambL.intensity=3.2;rimL.intensity=1.1;
     winLight.material.color.setHex(0xfff2dd);bg=0x1a1c26;fogD=0.02;
@@ -992,11 +1064,12 @@ function update3D(){
     winLight.material.color.setHex(0xffd9a0);winLight.material.opacity=.95;bg=0x0a0a12;fogD=0.022;
   }
   /* 色调背景叠加 */
-  if(/青橙|电影/.test(gradTxt))bg=0x081018;
-  else if(/日系|清新|粉/.test(gradTxt))bg=0x201a24;
-  else if(/暗黑|黑|灰/.test(gradTxt))bg=0x07070b;
-  else if(/赛博|霓虹/.test(gradTxt))bg=0x160a20;
-  else if(/暖|金|大地/.test(gradTxt))bg=0x1a1409;
+  if(/青橙|电影|teal and orange|cinematic/i.test(gradTxt))bg=0x081018;
+  else if(/日系|清新|粉|pastel|japanese|soft pink/i.test(gradTxt))bg=0x201a24;
+  else if(/暗黑|黑|灰|monochrome|black and white|noir|dark/i.test(gradTxt))bg=0x07070b;
+  else if(/赛博|霓虹|cyberpunk|neon/i.test(gradTxt))bg=0x160a20;
+  else if(/暖|金|大地|warm|golden|earth|sepia/i.test(gradTxt))bg=0x1a1409;
+  else if(/蓝|冷|blue|cool/.test(gradTxt))bg=0x0c1220;
   scene3.background.setHex(bg);scene3.fog.color.setHex(bg);scene3.fog.density=fogD;
   /* 灯带颜色跟随光线设定 */
   const strips=window.__glowStrips||[],pools=window.__glowPools||[];
@@ -1007,21 +1080,41 @@ function update3D(){
   else if(/蓝调|冷/.test(lightTxt))glowCol=0x8fb8ff;
   strips.forEach((st,i)=>{ if(i!==1||!/霓虹|赛博/.test(lightTxt)) st.material.color.setHex(glowCol); });
   pools.forEach(p=>p.material.color.setHex(glowCol));
+  /* 氛围粒子: 樱花粉/雪花/尘埃/霓虹光点 */
+  const pt=window.__particles, beam=window.__beam;
+  if(pt){
+    let pc=0xf0d8b8, ps=0.075, op=.75;
+    if(/樱花|花瓣|cherry|blossom|petal|春|spring/i.test(subjTxt+lightTxt)){pc=0xffc0d0;ps=0.09;op=.9}
+    else if(/雪|snow|winter/i.test(subjTxt+lightTxt)){pc=0xffffff;ps=0.07;op=.9}
+    else if(/雨|rain/i.test(subjTxt+lightTxt)){pc=0xaac8e0;ps=0.05;op=.6}
+    else if(/霓虹|neon|cyber|夜|night/i.test(subjTxt+lightTxt)){pc=0xff56c8;ps=0.06;op=.85}
+    else if(/尘|dust|光斑|sunbeam|bokeh/i.test(subjTxt+lightTxt)){pc=0xfff0d0;ps=0.06;op=.7}
+    pt.mat.color.setHex(pc);pt.mat.size=ps;pt.mat.opacity=op;
+  }
+  if(beam){
+    let bc=glowCol, bop=.10;
+    if(/樱花|春|spring|blossom/i.test(subjTxt)){bc=0xffd0d8;bop=.16}
+    else if(/霓虹|neon/i.test(subjTxt+lightTxt)){bc=0xff56c8;bop=.14}
+    else if(/冷|blue|blue hour/i.test(lightTxt)){bc=0xa8c8ff;bop=.12}
+    beam.material.color.setHex(bc);beam.material.opacity=bop;
+  }
   backWall.material.color.setHex(bg).offsetHSL(0,0,0.04);
 
   /* 景深: 依据光圈(器材/曝光选择) */
   const mA=gearTxt.match(/f\/([\d.]+)/);
   const ap=mA?parseFloat(mA[1]):2.8;
-  const dofHalf=ap<=1.4?1.2:ap<=2.8?2.6:ap<=5.6?5:12;
+  const dofHalf=ap<=0.95?0.7:ap<=1.4?1.2:ap<=2?2.0:ap<=2.8?3.0:ap<=5.6?6:14;
   furnishingsDepth(dofHalf);
-  /* 焦距透视 */
-  const mF=gearTxt.match(/(\d+)mm/);
-  const fl=mF?parseInt(mF[1]):50;
-  cam3.fov=2*Math.atan(36/(2*Math.max(12,Math.min(200,fl))))*180/Math.PI;
+  /* 焦距透视(强化: 全范围 14-200mm) */
+  const mF=gearTxt.match(/(\d{2,3})\s*mm/i);
+  const fl=mF?Math.max(14,Math.min(200,parseInt(mF[1]))):50;
+  cam3.fov=2*Math.atan(36/(2*fl))*180/Math.PI;
   cam3.updateProjectionMatrix();
+  window.__lensFocal=fl;
+  window.__lensAperture=ap;
 
   /* HUD */
-  const lightName=(/黄金/.test(lightTxt)?'黄金时刻':/蓝调|冷/.test(lightTxt)?'冷调':/霓虹/.test(lightTxt)?'霓虹':/烛|暖/.test(lightTxt)?'暖光':/低调|暗/.test(lightTxt)?'低调光':/高调|明亮/.test(lightTxt)?'高调光':'默认光');
+  const lightName=(/黄金|golden|sunset|warm sun/i.test(lightTxt)?'黄金时刻':/蓝调|blue hour|overcast|cold/i.test(lightTxt)?'冷调':/霓虹|neon|cyber/i.test(lightTxt)?'霓虹':/烛|暖光|candle|cozy/i.test(lightTxt)?'暖光':/低调|low key|dramatic/i.test(lightTxt)?'低调光':/高调|high key|bright/i.test(lightTxt)?'高调光':'自然光');
   $('vHud').innerHTML=`${charOn?'👤 人物':'◎ 无人物'} · ${lightName}<small>${fl}mm f/${ap}${/青橙|日系|暗黑|赛博|暖/.test(gradTxt)?' · '+gradTxt.slice(0,14):''}</small>`;
 }
 
@@ -1030,10 +1123,14 @@ function furnishingsDepth(dofHalf){
   const all=[...furn3,...pillars3];
   all.forEach(o=>{
     const d=Math.abs(o.position.z-focus);
-    const k=Math.min(1,Math.max(0,(d-dofHalf)/dofHalf));
+    const k=Math.min(1,Math.max(0,(d-dofHalf)/Math.max(dofHalf,0.4)));
     if(!o.material)return;
+    const vis=1-k*0.72;                      /* 更明显虚化 */
     o.material.transparent=k>0.02;
-    o.material.opacity=1-k*0.55;
+    o.material.opacity=Math.max(0.25,vis);
+    const sc=1+k*0.5;                        /* 散景扩散 */
+    if(!o.userData._baseScale)o.userData._baseScale=o.scale.x;
+    o.scale.setScalar(o.userData._baseScale*sc);
   });
 }
 
@@ -1042,10 +1139,19 @@ function animate3D(){
   if(!ready3)return;requestAnimationFrame(animate3D);
   oy+=0.0014;
   const swing=Math.sin(oy)*0.55;
-  const gearTxt=[...(S.blocks.gear.items||[]).map(i=>i.zh),S.blocks.gear.text].join(' ');
-  const mF=gearTxt.match(/(\d+)mm/);
-  const fl=mF?parseInt(mF[1]):50;
-  const dist=3.9*Math.max(0.6,Math.min(3.2,fl/50));   /* 保持主体大小, 焦距越长站越远 */
+  /* 粒子缓慢飘动 */
+  const pt=window.__particles;
+  if(pt&&pt.geo){
+    const arr=pt.geo.attributes.position.array;
+    for(let i=0;i<arr.length;i+=3){
+      arr[i+1]-=0.0035;                       /* 下落 */
+      arr[i]+=Math.sin(oy*2+i)*0.0012;        /* 飘摆 */
+      if(arr[i+1]<0){arr[i+1]=4.6;arr[i]=(Math.random()-0.5)*9;arr[i+2]=(Math.random()-0.5)*11-1}
+    }
+    pt.geo.attributes.position.needsUpdate=true;
+  }
+  const fl=window.__lensFocal||50;
+  const dist=3.9*Math.max(0.35,Math.min(4.0,fl/50));   /* 保持主体大小, 焦距越长站越远 */
   cam3.position.set(Math.sin(swing)*dist*0.5+0.55,1.55,Math.cos(swing)*dist*0.92);
   cam3.lookAt(0,1.2,-0.3);
   ren3.render(scene3,cam3);
