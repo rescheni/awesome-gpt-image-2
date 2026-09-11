@@ -159,6 +159,117 @@ def starters():
     with open(p) as f:
         return jsonify({"ok": True, "data": json.load(f)})
 
+@app.route("/stealth")
+def stealth_page():
+    """暗拍视界 · 角色摄影提示词工作模式"""
+    return render_template("stealth.html")
+
+@app.route("/api/stealth/data")
+def stealth_data():
+    """暗拍视界参数库(游客可看)"""
+    p = os.path.join(BASE, "data", "stealth.json")
+    if not os.path.exists(p):
+        return jsonify({"ok": False, "msg": "数据缺失"}), 404
+    with open(p) as f:
+        return jsonify({"ok": True, "data": json.load(f)})
+
+@app.route("/api/stealth/generate", methods=["POST"])
+def stealth_generate():
+    """生成暗拍风格角色摄影提示词"""
+    req = request.json or {}
+    role = (req.get("role") or "").strip()
+    if not role:
+        return jsonify({"ok": False, "msg": "请输入角色名"}), 400
+
+    mode = req.get("mode") or "cos"          # cos / anime / korean / japanese
+    style = req.get("style") or ""           # 手机偷拍 / 长焦偷拍 ...
+    count = 10 if str(req.get("n")) == "10" else 1
+    place = (req.get("place") or "").strip()
+    outfit = (req.get("outfit") or "").strip()
+    action = (req.get("action") or "").strip()
+
+    try:
+        with open(os.path.join(BASE, "data", "stealth.json")) as f:
+            D = json.load(f)
+    except Exception as e:
+        return jsonify({"ok": False, "msg": f"数据读取失败: {e}"}), 500
+
+    import random
+    random.seed()
+
+    STYLE_MAP = {
+        "cos":      "high-quality realistic adult cosplay photography",
+        "anime":    "live-action adaptation of an anime character, grounded and realistic",
+        "korean":   "Korean ins-style casual street photography",
+        "japanese": "Japanese street snap photography, natural everyday tone",
+    }
+    mode_en = STYLE_MAP.get(mode, STYLE_MAP["cos"])
+
+    def head():
+        bits = [
+            f"{role}, explicitly an adult character",
+            mode_en,
+            "preserve the character's iconic hairstyle, hair color, facial features, signature color palette, outfit structure and accessories",
+        ]
+        if outfit:
+            bits.append(f"wearing {outfit}, fully dressed")
+        bits.append("candid voyeuristic-style framing, fictional staged photography, not real surveillance")
+        return ", ".join(bits)
+
+    def tail():
+        s = random.sample(D.get("signatures", []), 6)
+        return (f"realistic skin texture, natural hair strands, authentic fabric texture, natural body proportions, "
+                f"natural hand anatomy, natural depth of field, not over-smoothed, not over-HDR; " + ", ".join(s))
+
+    def pick(pool, override=None):
+        if override:
+            for it in pool:
+                if it["zh"] in override or override in it["zh"]:
+                    return it
+        return random.choice(pool)
+
+    results = []
+    if count == 10:
+        for sh in D.get("shots10", [])[:10]:
+            lens = pick(D["lenses"], sh.get("lens"))
+            act = action or random.choice(D["actions"])["en"]
+            sc = place or random.choice(D["scenes"])["zh"]
+            sc_en = next((x["en"] for x in D["scenes"] if x["zh"] == sc), sc)
+            lt = pick(D["lightings"])["en"]
+            txt = (f"{head()}. "
+                   f"Camera position: {sh['pos']}. Foreground: {sh['obs']}. "
+                   f"The character is {act} in {sc_en}, caught mid-moment without posing. "
+                   f"Lens: {sh['lens']}. {sh.get('note','')}. "
+                   f"Lighting: {lt}. Composition deliberately imperfect with off-center subject. "
+                   f"{tail()}.")
+            results.append({"title": sh["zh"], "prompt": txt})
+    else:
+        pos = pick(D["positions"])
+        obs = pick(D["obstructions"])
+        lens = pick(D["lenses"], style if style else None)
+        sc = place or random.choice(D["scenes"])["zh"]
+        sc_en = next((x["en"] for x in D["scenes"] if x["zh"] == sc), sc)
+        lt = pick(D["lightings"])["en"]
+        act = action or random.choice(D["actions"])["en"]
+        # 20~30% 概率"被发现"
+        disc = random.random() < 0.26
+        if disc:
+            act = random.choice(D["discovered"])["en"]
+        if style and not any(style == l["zh"] for l in D["lenses"]):
+            lens = {"zh": style, "en": style}
+        txt = (f"{head()}. "
+               f"Camera position: {pos['en']}. Foreground: {obs['en']}. "
+               f"The character is {act} in {sc_en}, caught mid-moment without posing. "
+               f"Lens: {lens['en']}. "
+               f"Lighting: {lt}. "
+               f"{'The subject has just noticed the camera, caught-off-guard.' if disc else 'The subject is unaware of the camera.'} "
+               f"Composition deliberately imperfect: subject off-center, slight tilt, partial cropping allowed, ample negative space. "
+               f"{tail()}.")
+        results.append({"title": "偷拍感抓拍" + ("（被发现）" if disc else ""), "prompt": txt})
+
+    return jsonify({"ok": True, "results": results, "count": len(results),
+                    "notice": D.get("notice", "")})
+
 @app.route("/lens")
 def lens_page():
     """Three.js 镜头效果预览页"""

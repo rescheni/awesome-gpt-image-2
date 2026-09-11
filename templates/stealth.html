@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗拍视界 · 角色摄影提示词</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="dark"]{
+  --bg:#07070b;--bg2:#0e0e15;--bg3:#14141d;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.16);
+  --text:#eeece7;--text2:#a3a3b0;--text3:#767683;
+  --accent:#e0a458;--accent2:#f2c98b;--purple:#8b7cf6;--red:#e06c6c;
+  --input:rgba(255,255,255,.035);--hover:rgba(255,255,255,.06);--shadow:0 20px 60px rgba(0,0,0,.55);
+}
+[data-theme="light"]{
+  --bg:#f3f1ec;--bg2:#fff;--bg3:#faf9f6;--border:rgba(0,0,0,.09);--border2:rgba(0,0,0,.17);
+  --text:#1d1a15;--text2:#5f5a51;--text3:#87817a;
+  --accent:#b8802f;--accent2:#8a5f1c;--purple:#6252e0;--red:#c04a4a;
+  --input:rgba(0,0,0,.025);--hover:rgba(0,0,0,.04);--shadow:0 16px 44px rgba(70,58,34,.13);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  transition:background .3s,color .3s}
+[data-theme="dark"] body{background-image:
+  radial-gradient(ellipse 45% 35% at 8% -4%,rgba(224,164,88,.10),transparent 70%),
+  radial-gradient(ellipse 40% 30% at 95% 3%,rgba(139,124,246,.09),transparent 70%)}
+.top{display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:56px;
+  background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit}
+.logo-mark{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;
+  box-shadow:0 3px 16px rgba(224,164,88,.35)}
+.logo-name{font-family:'Space Grotesk';font-size:14.5px;font-weight:600}
+.logo-name em{font-style:normal;color:var(--accent);font-weight:400}
+.btn{border:1px solid var(--border);background:var(--input);color:var(--text);padding:6px 14px;border-radius:9px;
+  font-size:12.5px;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none;display:inline-block;white-space:nowrap}
+.btn:hover{background:var(--hover);border-color:var(--border2)}
+.ib{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:9px;
+  border:1px solid var(--border);background:var(--input);cursor:pointer;font-size:14px;color:var(--text2)}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+
+/* 头部 */
+.hero{text-align:center;margin-bottom:26px;position:relative}
+.hero-badge{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:2.4px;
+  padding:5px 14px;border-radius:100px;border:1px solid rgba(224,164,88,.4);
+  color:var(--accent2);background:rgba(224,164,88,.09);margin-bottom:14px;font-family:'Space Grotesk'}
+.hero h1{font-size:34px;font-weight:700;letter-spacing:-.5px;margin-bottom:9px;
+  background:linear-gradient(100deg,var(--text) 25%,var(--accent) 65%,var(--purple) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:13.5px;color:var(--text2);line-height:1.85;max-width:660px;margin:0 auto}
+.framemark{position:absolute;width:26px;height:26px;border:1.5px solid rgba(224,164,88,.4)}
+.fm-tl{top:-4px;left:0;border-right:none;border-bottom:none}
+.fm-tr{top:-4px;right:0;border-left:none;border-bottom:none}
+.fm-bl{bottom:-4px;left:0;border-right:none;border-top:none}
+.fm-br{bottom:-4px;right:0;border-left:none;border-top:none}
+
+/* 卡片 */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:17px;padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+.lab{font-size:10.5px;letter-spacing:1.9px;color:var(--text3);text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;margin-bottom:11px;font-family:'Space Grotesk'}
+.lab::after{content:"";flex:1;height:1px;background:var(--border)}
+.lab b{color:var(--red);font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
+.role-in{width:100%;padding:15px 18px;background:var(--input);border:1.5px solid var(--border);border-radius:13px;
+  color:var(--text);font-size:17px;font-weight:500;outline:none;font-family:inherit;transition:.25s;letter-spacing:.3px}
+.role-in:focus{border-color:rgba(224,164,88,.65);background:var(--hover);box-shadow:0 0 0 4px rgba(224,164,88,.09)}
+.role-in::placeholder{color:var(--text3);font-weight:300;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:12.5px;padding:6px 14px;border-radius:100px;cursor:pointer;border:1px solid var(--border);
+  color:var(--text2);transition:.18s;background:transparent;font-family:inherit}
+.chip:hover{color:var(--text);border-color:var(--border2);transform:translateY(-2px)}
+.chip.on{background:linear-gradient(135deg,rgba(224,164,88,.28),rgba(139,124,246,.16));
+  border-color:rgba(224,164,88,.65);color:var(--accent2);font-weight:600;box-shadow:0 0 14px rgba(224,164,88,.2)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.row{grid-template-columns:1fr}.hero h1{font-size:25px}}
+.mini{width:100%;padding:10px 13px;background:var(--input);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.mini:focus{border-color:rgba(224,164,88,.5)}
+.gen{width:100%;padding:16px;border:none;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-size:16px;font-weight:700;letter-spacing:2px;transition:.25s;position:relative;z-index:0;
+  background:linear-gradient(120deg,#f2c98b,#e0a458 40%,#8b7cf6 125%);color:#1a1206;
+  box-shadow:0 6px 28px rgba(224,164,88,.3)}
+.gen:hover{transform:translateY(-2px);box-shadow:0 10px 38px rgba(224,164,88,.42)}
+.gen:disabled{opacity:.6;cursor:wait;transform:none}
+.gen::after{content:"";position:absolute;inset:-2px;border-radius:16px;z-index:-1;
+  background:linear-gradient(120deg,var(--accent),var(--purple),var(--accent));background-size:220% 100%;
+  filter:blur(10px);opacity:.5;animation:pulse 3.6s linear infinite}
+@keyframes pulse{0%{background-position:0% 50%}100%{background-position:220% 50%}}
+
+/* 结果 */
+.res-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.res-card{border:1px solid var(--border);border-radius:13px;padding:15px 17px;background:var(--input);
+  transition:.22s;animation:in .4s cubic-bezier(.2,.9,.3,1.1) backwards;position:relative}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.res-card:hover{border-color:rgba(224,164,88,.35);background:var(--hover)}
+.res-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.res-title{font-size:13px;color:var(--accent2);font-weight:600;display:flex;align-items:center;gap:7px}
+.res-idx{font-family:'Space Grotesk';font-size:11px;color:var(--text3);padding:1px 7px;
+  border-radius:6px;border:1px solid var(--border)}
+.res-body{font-size:12.5px;line-height:1.85;color:var(--text2);white-space:pre-wrap;font-weight:300;
+  max-height:150px;overflow-y:auto;padding-right:5px}
+.res-body::-webkit-scrollbar{width:3px}.res-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.cp{font-size:11.5px;padding:4px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;
+  color:var(--text2);cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap}
+.cp:hover{border-color:var(--accent);color:var(--accent2);background:rgba(224,164,88,.08)}
+.notice{margin-top:22px;padding:13px 16px;border-radius:11px;border:1px solid rgba(224,108,108,.28);
+  background:rgba(224,108,108,.06);font-size:11.5px;line-height:1.8;color:var(--text2)}
+.notice b{color:var(--red)}
+.empty{text-align:center;padding:38px 20px;color:var(--text3);font-size:13px}
+.empty .big{font-size:34px;margin-bottom:10px;opacity:.5}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);
+  border:1px solid rgba(224,164,88,.45);color:var(--accent2);padding:9px 22px;border-radius:100px;font-size:12.5px;
+  z-index:300;transition:transform .32s cubic-bezier(.2,.9,.3,1.2);box-shadow:var(--shadow)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a class="logo" href="/"><div class="logo-mark">✦</div><div class="logo-name">Prompt<em>Atelier</em></div></a>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:12px;color:var(--text3)">工作模式 · 暗拍视界</span>
+    <button class="ib" id="themeBtn">🌙</button>
+    <a class="btn" href="/lens">🎥 镜头工作台</a>
+    <a class="btn" href="/">← 工作台</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="framemark fm-tl"></span><span class="framemark fm-tr"></span>
+    <span class="framemark fm-bl"></span><span class="framemark fm-br"></span>
+    <div class="hero-badge">◉ 电影化抓拍美学</div>
+    <h1>暗拍视界</h1>
+    <p>输入一个角色名，自动生成<b>「隐蔽观察 / 半遮挡视角 / 长焦压缩」</b>的电影化角色摄影提示词。<br>
+       只使用偷拍摄影的视觉语言 —— 虚构摆拍，非真实偷拍。</p>
+  </div>
+
+  <div class="card">
+    <div class="lab">① 角色 <b>*必填</b></div>
+    <input class="role-in" id="role" placeholder="输入角色名，例如：2B / 蕾姆 / 初音未来 / 明日香 / 原创角色…" onkeydown="if(event.key==='Enter')gen()">
+
+    <div style="height:20px"></div>
+    <div class="lab">② 风格模式</div>
+    <div class="chips" id="modeChips"></div>
+
+    <div style="height:20px"></div>
+    <div class="lab">③ 镜头 & 机位偏好（可不选，自动随机）</div>
+    <div class="chips" id="lensChips"></div>
+
+    <div style="height:20px"></div>
+    <div class="row">
+      <div>
+        <div class="lab">④ 场景地点</div>
+        <div class="chips" id="sceneChips"></div>
+      </div>
+      <div>
+        <div class="lab">⑤ 服装 / 动作（选填）</div>
+        <input class="mini" id="outfit" placeholder="服装，如：白色衬衫 + 深色西裤">
+        <div style="height:8px"></div>
+        <input class="mini" id="action" placeholder="动作，如：低头看手机">
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+    <div class="lab">⑥ 生成数量</div>
+    <div class="chips" id="nChips"></div>
+
+    <div style="height:22px"></div>
+    <button class="gen" id="genBtn" onclick="gen()">◉ 生成提示词</button>
+  </div>
+
+  <div class="card">
+    <div class="lab">生成结果 <span id="cnt" style="letter-spacing:0;text-transform:none;color:var(--text3)"></span></div>
+    <div class="res-grid" id="results">
+      <div class="empty"><div class="big">◉</div>输入角色名后点击上方按钮生成<br><span style="font-size:11.5px">将自动组合机位 / 遮挡 / 焦段 / 动作 / 场景 / 光线</span></div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <b>⚠️ 使用说明：</b>本模式生成的均为<b>虚构、摆拍、电影化模拟</b>的摄影提示词，只使用偷拍摄影的视觉语言（长焦压缩 / 前景遮挡 / 不完美构图）。
+    所有角色默认设定为<b>成年角色</b>；仅限公开或半公开场景；<b>不涉及</b>真实人物隐私侵犯、真实非自愿拍摄、厕所 / 更衣室 / 浴室 / 卧室等私密空间、未成年人。<br>
+    请遵守当地法律法规与平台规范，仅用于合法的艺术创作与视觉研究。
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)};
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* 主题 */
+const TH=['auto','dark','light'],TI={auto:'🌗',dark:'🌙',light:'☀️'};
+let themeMode=localStorage.getItem('pa-theme')||'auto';
+function applyTheme(){
+  const sys=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+  document.documentElement.setAttribute('data-theme',themeMode==='auto'?sys:themeMode);
+  $('themeBtn').textContent=TI[themeMode];
+}
+$('themeBtn').onclick=()=>{themeMode=TH[(TH.indexOf(themeMode)+1)%3];localStorage.setItem('pa-theme',themeMode);applyTheme()};
+applyTheme();
+
+/* 选项 */
+const MODES=[['真人 COS','cos'],['二次元转真人','anime'],['韩国 ins','korean'],['日系街拍','japanese']];
+let mode='cos', lensPick='', scenePick='', n=1;
+
+function buildChips(){
+  $('modeChips').innerHTML=MODES.map(([zh,k])=>`<span class="chip ${k===mode?'on':''}" data-k="${k}">${zh}</span>`).join('');
+  $('modeChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    mode=c.dataset.k;$('modeChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+  });
+  $('nChips').innerHTML=[[1,'单张'],[10,'n=10 组合集']].map(([v,t])=>
+    `<span class="chip ${v===n?'on':''}" data-n="${v}">${t}</span>`).join('');
+  $('nChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    n=+c.dataset.n;$('nChips').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+  });
+}
+buildChips();
+
+async function api(u,o={}){try{const r=await fetch(u,{headers:{'Content-Type':'application/json'},...o});return await r.json()}catch(e){return{ok:false,msg:'网络错误'}}}
+
+async function loadData(){
+  const r=await api('/api/stealth/data');
+  if(!r.ok)return;
+  const D=r.data;
+  $('lensChips').innerHTML=D.lenses.map(l=>`<span class="chip" data-zh="${l.zh}">${l.zh}</span>`).join('');
+  $('lensChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    const was=c.classList.contains('on');
+    $('lensChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    if(!was){c.classList.add('on');lensPick=c.dataset.zh}else lensPick='';
+  });
+  $('sceneChips').innerHTML=D.scenes.slice(0,12).map(s=>`<span class="chip" data-zh="${s.zh}">${s.zh}</span>`).join('');
+  $('sceneChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    const was=c.classList.contains('on');
+    $('sceneChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    if(!was){c.classList.add('on');scenePick=c.dataset.zh}else scenePick='';
+  });
+}
+loadData();
+
+async function gen(){
+  const role=$('role').value.trim();
+  if(!role){toast('请先输入角色名');$('role').focus();return}
+  const btn=$('genBtn');btn.disabled=true;btn.textContent='◉ 生成中…';
+  const r=await api('/api/stealth/generate',{method:'POST',body:JSON.stringify({
+    role, mode, style:lensPick, place:scenePick, n,
+    outfit:$('outfit').value.trim(), action:$('action').value.trim()
+  })});
+  btn.disabled=false;btn.textContent='◉ 生成提示词';
+  if(!r.ok){toast(r.msg||'生成失败');return}
+  window.__res=r.results;
+  $('cnt').textContent=`· ${r.results.length} 条`;
+  $('results').innerHTML=r.results.map((x,i)=>`
+    <div class="res-card" style="animation-delay:${i*0.04}s">
+      <div class="res-head">
+        <span class="res-title"><span class="res-idx">${String(i+1).padStart(2,'0')}</span>${esc(x.title)}</span>
+        <button class="cp" onclick="cp(${i})">⧉ 复制</button>
+      </div>
+      <div class="res-body">${esc(x.prompt)}</div>
+    </div>`).join('');
+  toast('✅ 已生成 '+r.results.length+' 条提示词');
+}
+async function cp(i){
+  const t=(window.__res||[])[i];if(!t)return;
+  try{await navigator.clipboard.writeText(t.prompt);toast('✅ 已复制')}
+  catch(e){const ta=document.createElement('textarea');ta.value=t.prompt;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');ta.remove();toast('✅ 已复制')}
+}
+window.gen=gen;window.cp=cp;
+</script>
+</body>
+</html>
