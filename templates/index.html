@@ -1075,6 +1075,7 @@ async function handleSplatFile(file){
     vib.innerHTML='构建泼溅…<small>生成 '+pts.geometry.attributes.position.count.toLocaleString()+' 个高斯点</small>';
     ensureStudio();
     studio3d.setSplat(pts);
+    saveSplatImage(img);            /* 存源图供镜头台同步 */
     $('splatReset').style.display='';
     $('splatTip').style.display='';
     vib.innerHTML='🖼 图片 3D 场景<small>'+pts.geometry.attributes.position.count.toLocaleString()+' 高斯点</small>';
@@ -1087,7 +1088,22 @@ async function handleSplatFile(file){
     btn.disabled=false; btn.textContent='🖼 图片转 3D';
   }
 }
+/* 压缩并保存源图(base64), 供镜头台重建同一场景 */
+function saveSplatImage(img){
+  try{
+    const max=1024;
+    const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+    const sc=Math.min(1, max/Math.max(iw,ih));
+    const c=document.createElement('canvas');
+    c.width=Math.round(iw*sc); c.height=Math.round(ih*sc);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const url=c.toDataURL('image/jpeg',0.82);
+    localStorage.setItem('pa-splat-img',url);
+    localStorage.setItem('pa-splat-meta',JSON.stringify({w:iw,h:ih,ts:Date.now()}));
+  }catch(e){console.warn('save splat img failed',e)}
+}
 function resetSplat(){
+  try{localStorage.removeItem('pa-splat-img');localStorage.removeItem('pa-splat-meta')}catch(e){}
   if(studio3d){studio3d.clearSplat();studio3d.setFocus(-0.2)}
   $('splatReset').style.display='none';
   $('splatTip').style.display='none';
@@ -1131,9 +1147,28 @@ Object.assign(window,{
 $('splatImport').onclick=()=>$('splatFile').click();
 $('splatFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)handleSplatFile(f);e.target.value=''};
 $('splatReset').onclick=resetSplat;
-window.handleSplatFile=handleSplatFile;window.resetSplat=resetSplat;
+window.handleSplatFile=handleSplatFile;window.resetSplat=resetSplat;window.saveSplatImage=saveSplatImage;
 
-(async function(){await refreshAuth();await loadAll();renderOpts();applyLensFromStorage()})();
+(async function(){
+  await refreshAuth();await loadAll();renderOpts();applyLensFromStorage();
+  /* 若之前导入过图片, 自动重建泼溅场景 */
+  try{
+    const url=localStorage.getItem('pa-splat-img');
+    if(url){
+      const img=new Image();
+      img.onload=async()=>{
+        try{
+          ensureStudio();
+          const pts=await SplatLab.imageToSplat(img,{density:190,depthScale:1.7});
+          studio3d.setSplat(pts);
+          $('splatReset').style.display='';$('splatTip').style.display='';
+          $('vHud').innerHTML='🖼 图片 3D 场景<small>'+pts.geometry.attributes.position.count.toLocaleString()+' 高斯点(已同步)</small>';
+        }catch(e){}
+      };
+      img.src=url;
+    }
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
